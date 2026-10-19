@@ -1,0 +1,5 @@
+[
+  {"id": "x2", "tool": "Greptile", "url": "https://example/x2/21",
+   "quote": "The ws server still parses frames with the old schema name, so it will fail to build.",
+   "reason": "Names the stale caller (the ws server) and the renamed schema without the path or symbol."}
+]

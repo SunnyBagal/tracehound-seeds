@@ -1,0 +1,14 @@
+{
+  "number": 5,
+  "reviewComments": [
+    {"id": 51, "user": {"login": "greptile-apps[bot]"}, "path": "src/x.ts", "line": 3, "original_line": 3,
+     "side": "RIGHT", "subject_type": "line", "html_url": "https://example/c1/51", "body": "This rename breaks callers."}
+  ],
+  "reviews": [
+    {"id": 52, "user": {"login": "cursor[bot]"}, "html_url": "https://example/c1/52", "body": ""}
+  ],
+  "issueComments": [
+    {"id": 53, "user": {"login": "coderabbitai[bot]"}, "html_url": "https://example/c1/53", "body": "## Walkthrough\nRenames a helper."},
+    {"id": 54, "user": {"login": "SunnyBagal"}, "html_url": "https://example/c1/54", "body": "@coderabbitai review"}
+  ]
+}

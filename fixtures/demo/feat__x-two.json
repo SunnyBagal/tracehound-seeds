@@ -1,0 +1,13 @@
+{
+  "number": 2,
+  "reviewComments": [
+    {"id": 21, "user": {"login": "greptile-apps[bot]"}, "path": "packages/common/src/types.ts", "line": 120, "original_line": 120,
+     "side": "RIGHT", "subject_type": "line", "html_url": "https://example/x2/21",
+     "body": "The ws server still parses frames with the old schema name, so it will fail to build."}
+  ],
+  "reviews": [],
+  "issueComments": [
+    {"id": 22, "user": {"login": "coderabbitai[bot]"}, "html_url": "https://example/x2/22",
+     "body": "## Walkthrough\nRenames `WsMessageSchema` to `ClientMessageSchema` and adds server message schemas.\n\n| File | Change |\n|---|---|\n| packages/common/src/types.ts | Renamed `WsMessageSchema`, added `ServerMessageSchema` |\n| apps/http-backend/src/index.ts | Updated import |"}
+  ]
+}

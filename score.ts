@@ -1,24 +1,34 @@
-// score.ts — decides rule (a) of SCORING.md for every seed and tool.
+// score.ts — applies SCORING.md to every seed and tool.
 //
 //   GITHUB_TOKEN=... bun score.ts            # live: reads the PRs on the mirrors
-//   bun score.ts --fixtures fixtures         # offline: reads fixtures/<repo>/<branch>.json
+//   bun score.ts --fixtures fixtures --key fixtures/key.json \
+//                --manual fixtures/manual.json --marks fixtures/control-marks.json
 //   (also runs under `npx tsx score.ts ...`)
 //
-// Rule (a): a seed is caught by a tool if any inline review comment by that
-// tool is on an `accept` path at a line within [start-3, end+3]. The line is
-// the comment's anchor on the PR head side (`line`, or `original_line` once the
-// comment is outdated); comments on the base side (side = LEFT) and file-level
-// comments have no head-side line and never match.
+// Comments read per PR: inline review comments (pulls/{n}/comments), review
+// bodies (pulls/{n}/reviews) and conversation comments (issues/{n}/comments).
 //
-// Rule (b) (a review body or summary naming an accept path AND
-// brokenSymbolOrKey) is decided by hand. This script only lists candidate
-// texts for that review; it never scores them.
+// Automatic rules:
+//   D  location: an inline comment on an accept path whose head-side line
+//      (`line`, or `original_line` once outdated) is within [start-3, end+3].
+//      Base-side (LEFT) and file-level comments have no head-side line.
+//   X  mention: any comment whose text contains brokenSymbolOrKey
+//      (case-sensitive) and names an accept file, by its full path or its
+//      basename. A basename that is also the basename of a file the PR edits
+//      is ambiguous (it could just be restating the PR's own change), so in
+//      that case only the full accept path counts.
 //
-// Tool logins: TraceHound has no default here. Set TRACEHOUND_LOGINS (comma-separated) before scoring.
-// GREPTILE_LOGINS and BUGBOT_LOGINS override the defaults below.
+// Manual calls come from manual.json, control verdicts from control-marks.json
+// (both written by hand; schemas in README.md). This script never judges text.
+//
+// Logins (each overridable, comma-separated):
+//   TRACEHOUND_LOGINS  default github-actions[bot]
+//   CODERABBIT_LOGINS  default coderabbitai[bot]
+//   GREPTILE_LOGINS    default greptile-apps[bot]
+//   BUGBOT_LOGINS      default cursor[bot]
 
 import { readFileSync, existsSync } from "node:fs";
-import { join, resolve } from "node:path";
+import { join, resolve, basename } from "node:path";
 import { fileURLToPath } from "node:url";
 
 export type Range = { path: string; lines: [number, number] };
@@ -30,11 +40,14 @@ export type Seed = {
   title: string;
   accept: Range[];
   brokenSymbolOrKey: string | null;
+  edited: string[];
 };
 
-export type ReviewComment = {
+// Raw GitHub API shapes (only the fields used here).
+type User = { login: string } | null;
+export type ApiReviewComment = {
   id: number;
-  user: { login: string } | null;
+  user: User;
   path: string;
   line: number | null;
   original_line: number | null;
@@ -43,13 +56,21 @@ export type ReviewComment = {
   body: string;
   html_url?: string;
 };
-export type BodyComment = { id: number; user: { login: string } | null; body: string | null; html_url?: string };
-
+export type ApiBodyComment = { id: number; user: User; body: string | null; html_url?: string };
 export type PrData = {
   number: number;
-  reviewComments: ReviewComment[];
-  reviews: BodyComment[];
-  issueComments: BodyComment[];
+  reviewComments: ApiReviewComment[];
+  reviews: ApiBodyComment[];
+  issueComments: ApiBodyComment[];
+};
+
+export type Comment = {
+  kind: "inline" | "review" | "conversation";
+  login: string;
+  body: string;
+  url: string;
+  path: string | null;
+  line: number | null; // head-side anchor; null for non-inline, LEFT-side and file-level
 };
 
 export interface Source {
@@ -58,13 +79,26 @@ export interface Source {
 
 export type Tools = Record<string, string[]>;
 
+export const DEFAULT_LOGINS: Tools = {
+  TraceHound: ["github-actions[bot]"],
+  CodeRabbit: ["coderabbitai[bot]"],
+  Greptile: ["greptile-apps[bot]"],
+  Bugbot: ["cursor[bot]"],
+};
+const ENV_VARS: Record<string, string> = {
+  TraceHound: "TRACEHOUND_LOGINS",
+  CodeRabbit: "CODERABBIT_LOGINS",
+  Greptile: "GREPTILE_LOGINS",
+  Bugbot: "BUGBOT_LOGINS",
+};
+
 export function toolsFromEnv(env: Record<string, string | undefined> = process.env): Tools {
-  const list = (v: string | undefined, d: string[]) => (v ? v.split(",").map((s) => s.trim()).filter(Boolean) : d);
-  return {
-    TraceHound: list(env.TRACEHOUND_LOGINS, []),
-    Greptile: list(env.GREPTILE_LOGINS, ["greptile-apps[bot]"]),
-    Bugbot: list(env.BUGBOT_LOGINS, ["cursor[bot]"]),
-  };
+  const tools: Tools = {};
+  for (const [tool, def] of Object.entries(DEFAULT_LOGINS)) {
+    const v = env[ENV_VARS[tool]!];
+    tools[tool] = v ? v.split(",").map((s) => s.trim()).filter(Boolean) : def;
+  }
+  return tools;
 }
 
 // ---------------------------------------------------------------- sources
@@ -101,9 +135,9 @@ export class GitHubSource implements Source {
     if (!pull) return null;
     const n = pull.number;
     const [reviewComments, reviews, issueComments] = await Promise.all([
-      this.get<ReviewComment>(`${API}/repos/${repo}/pulls/${n}/comments`),
-      this.get<BodyComment>(`${API}/repos/${repo}/pulls/${n}/reviews`),
-      this.get<BodyComment>(`${API}/repos/${repo}/issues/${n}/comments`),
+      this.get<ApiReviewComment>(`${API}/repos/${repo}/pulls/${n}/comments`),
+      this.get<ApiBodyComment>(`${API}/repos/${repo}/pulls/${n}/reviews`),
+      this.get<ApiBodyComment>(`${API}/repos/${repo}/issues/${n}/comments`),
     ]);
     return { number: n, reviewComments, reviews, issueComments };
   }
@@ -118,79 +152,175 @@ export class FixtureSource implements Source {
   }
 }
 
-// ---------------------------------------------------------------- scoring
-
-export function anchorLine(c: ReviewComment): number | null {
-  if (c.side === "LEFT" || c.subject_type === "file") return null;
-  return c.line ?? c.original_line ?? null;
+export function normalize(pr: PrData): Comment[] {
+  const login = (u: User) => u?.login ?? "";
+  return [
+    ...pr.reviewComments.map((c): Comment => ({
+      kind: "inline",
+      login: login(c.user),
+      body: c.body ?? "",
+      url: c.html_url ?? `inline:${c.id}`,
+      path: c.path,
+      line: c.side === "LEFT" || c.subject_type === "file" ? null : (c.line ?? c.original_line ?? null),
+    })),
+    ...pr.reviews.map((r): Comment => ({
+      kind: "review", login: login(r.user), body: r.body ?? "", url: r.html_url ?? `review:${r.id}`, path: null, line: null,
+    })),
+    ...pr.issueComments.map((r): Comment => ({
+      kind: "conversation", login: login(r.user), body: r.body ?? "", url: r.html_url ?? `conversation:${r.id}`, path: null, line: null,
+    })),
+  ].filter((c) => c.body.trim() !== "");
 }
 
-export function matchesA(seed: Seed, c: ReviewComment): boolean {
-  const line = anchorLine(c);
-  if (line === null) return false;
+// ---------------------------------------------------------------- rules
+
+export const isX = (s: Seed) => s.class.startsWith("X-");
+
+export function locationMatch(seed: Seed, c: Comment): boolean {
+  if (c.kind !== "inline" || c.line === null) return false;
+  const line = c.line;
   return seed.accept.some((a) => a.path === c.path && line >= a.lines[0] - 3 && line <= a.lines[1] + 3);
 }
 
-export type SeedResult = {
-  seed: Seed;
-  pr: number | null;
-  perTool: Record<string, {
-    caught: boolean;                 // rule (a)
-    matching: ReviewComment[];       // inline comments that satisfy (a)
-    inline: ReviewComment[];         // every inline comment by the tool
-    bodies: BodyComment[];           // review bodies + PR-level comments by the tool
-    bCandidates: { kind: string; text: string; url?: string }[]; // for the manual (b) decision
-  }>;
-};
+const escapeRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
-function namesPath(text: string, path: string): boolean {
-  const base = path.split("/").pop()!;
-  return text.includes(path) || new RegExp(`(^|[^\\w./-])${base.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`).test(text);
+export function namesAcceptFile(text: string, acceptPath: string, edited: string[]): boolean {
+  if (text.includes(acceptPath)) return true;
+  const base = basename(acceptPath);
+  if (edited.some((p) => basename(p) === base)) return false; // ambiguous basename: full path only
+  return new RegExp(`(^|[^\\w.-])${escapeRe(base)}(?![\\w-])`).test(text);
 }
 
-export async function scoreAll(seeds: Seed[], source: Source, tools: Tools): Promise<SeedResult[]> {
+export function mentionMatch(seed: Seed, c: Comment): boolean {
+  const key = seed.brokenSymbolOrKey;
+  if (!key || !c.body.includes(key)) return false;
+  return seed.accept.some((a) => namesAcceptFile(c.body, a.path, seed.edited));
+}
+
+export function autoMatch(seed: Seed, c: Comment): boolean {
+  if (seed.class === "D") return locationMatch(seed, c);
+  if (isX(seed)) return mentionMatch(seed, c);
+  return false;
+}
+
+// ---------------------------------------------------------------- manual input
+
+export type ManualCall = { id: string; tool: string; url: string; quote: string; reason: string };
+export type ControlMark = { id: string; tool: string; url: string; verdict: "valid" | "invalid"; note?: string };
+
+export function readJsonArray<T>(file: string): T[] {
+  if (!existsSync(file)) return [];
+  const v = JSON.parse(readFileSync(file, "utf8"));
+  if (!Array.isArray(v)) throw new Error(`${file} must contain a JSON array`);
+  return v as T[];
+}
+
+export function validateManual(calls: ManualCall[], seeds: Seed[], tools: Tools): void {
+  for (const [i, m] of calls.entries()) {
+    const where = `manual.json[${i}]`;
+    const seed = seeds.find((s) => s.id === m.id);
+    if (!seed) throw new Error(`${where}: unknown seed id ${m.id}`);
+    if (seed.class === "C") throw new Error(`${where}: ${m.id} is a control; mark control comments in control-marks.json`);
+    if (!(m.tool in tools)) throw new Error(`${where}: unknown tool ${m.tool}`);
+    for (const f of ["url", "quote", "reason"] as const) {
+      if (typeof m[f] !== "string" || !m[f].trim()) throw new Error(`${where}: ${f} is required`);
+    }
+  }
+}
+
+export function validateMarks(marks: ControlMark[], seeds: Seed[], tools: Tools): void {
+  for (const [i, m] of marks.entries()) {
+    const where = `control-marks.json[${i}]`;
+    const seed = seeds.find((s) => s.id === m.id);
+    if (!seed) throw new Error(`${where}: unknown seed id ${m.id}`);
+    if (seed.class !== "C") throw new Error(`${where}: ${m.id} is not a control`);
+    if (!(m.tool in tools)) throw new Error(`${where}: unknown tool ${m.tool}`);
+    if (!m.url) throw new Error(`${where}: url is required`);
+    if (m.verdict !== "valid" && m.verdict !== "invalid") throw new Error(`${where}: verdict must be "valid" or "invalid"`);
+  }
+}
+
+// ---------------------------------------------------------------- scoring
+
+export type ToolResult = {
+  comments: Comment[]; // every non-empty comment by the tool on the PR
+  auto: Comment[];     // comments satisfying the automatic rule for the seed's class
+  manual: ManualCall[];
+  autoCaught: boolean;
+  manualCaught: boolean; // a manual call exists
+  caught: boolean;       // automatic or manual
+};
+export type SeedResult = { seed: Seed; pr: number | null; perTool: Record<string, ToolResult> };
+
+export async function scoreAll(seeds: Seed[], source: Source, tools: Tools, manual: ManualCall[] = []): Promise<SeedResult[]> {
   const results: SeedResult[] = [];
   for (const seed of seeds) {
     const pr = await source.pr(seed.repo, seed.branch);
-    const perTool: SeedResult["perTool"] = {};
+    const all = pr ? normalize(pr) : [];
+    const perTool: Record<string, ToolResult> = {};
     for (const [tool, logins] of Object.entries(tools)) {
-      const by = <T extends { user: { login: string } | null }>(xs: T[]) =>
-        xs.filter((x) => x.user && logins.includes(x.user.login));
-      const inline = pr ? by(pr.reviewComments) : [];
-      const bodies = pr ? [...by(pr.reviews), ...by(pr.issueComments)].filter((b) => (b.body ?? "").trim()) : [];
-      const matching = inline.filter((c) => matchesA(seed, c));
-      const key = seed.brokenSymbolOrKey;
-      const bCandidates: SeedResult["perTool"][string]["bCandidates"] = [];
-      if (key && seed.accept.length) {
-        const texts = bodies.map((b) => ({ kind: "body", text: b.body ?? "", url: b.html_url }));
-        for (const t of texts) {
-          if (t.text.includes(key) && seed.accept.some((a) => namesPath(t.text, a.path))) bCandidates.push(t);
-        }
-      }
-      perTool[tool] = { caught: matching.length > 0, matching, inline, bodies, bCandidates };
+      const comments = all.filter((c) => logins.includes(c.login));
+      const auto = comments.filter((c) => autoMatch(seed, c));
+      const calls = manual.filter((m) => m.id === seed.id && m.tool === tool);
+      perTool[tool] = {
+        comments, auto, manual: calls,
+        autoCaught: auto.length > 0,
+        manualCaught: calls.length > 0,
+        caught: auto.length > 0 || calls.length > 0,
+      };
     }
     results.push({ seed, pr: pr?.number ?? null, perTool });
   }
   return results;
 }
 
-export const CLASSES = ["X-typed", "X-keyed", "X-semantic", "D"] as const;
+export const ROWS: { label: string; match: (s: Seed) => boolean }[] = [
+  { label: "X-typed", match: (s) => s.class === "X-typed" },
+  { label: "X-keyed", match: (s) => s.class === "X-keyed" },
+  { label: "X-semantic", match: (s) => s.class === "X-semantic" },
+  { label: "all X", match: isX },
+  { label: "D", match: (s) => s.class === "D" },
+  { label: "all seeded", match: (s) => s.class !== "C" },
+];
 
-export function classTable(results: SeedResult[], tools: string[]): Record<string, Record<string, string>> {
-  const t: Record<string, Record<string, string>> = {};
+// One row per tool and class. "manual" counts seeds caught only by a manual
+// call (the automatic rule missed them); "auto + manual" is the union.
+export function summary(results: SeedResult[], tools: string[]): string[][] {
+  const rows: string[][] = [];
   for (const tool of tools) {
-    t[tool] = {};
-    let all = 0, allN = 0;
-    for (const cls of CLASSES) {
-      const rs = results.filter((r) => r.seed.class === cls);
-      const caught = rs.filter((r) => r.perTool[tool]!.caught).length;
-      t[tool]![cls] = `${caught}/${rs.length}`;
-      all += caught;
-      allN += rs.length;
+    for (const r of ROWS) {
+      const rs = results.filter((x) => r.match(x.seed));
+      if (rs.length === 0) continue;
+      const auto = rs.filter((x) => x.perTool[tool]!.autoCaught).length;
+      const manualOnly = rs.filter((x) => !x.perTool[tool]!.autoCaught && x.perTool[tool]!.manualCaught).length;
+      const both = rs.filter((x) => x.perTool[tool]!.caught).length;
+      rows.push([tool, r.label, String(rs.length), `${auto}/${rs.length}`, `+${manualOnly}`, `${both}/${rs.length}`]);
     }
-    t[tool]!["all seeded"] = `${all}/${allN}`;
   }
-  return t;
+  return rows;
+}
+
+export type ControlRow = { tool: string; comments: number; valid: number; invalid: number; unmarked: number };
+
+export function controlSummary(results: SeedResult[], tools: string[], marks: ControlMark[]): ControlRow[] {
+  const controls = results.filter((r) => r.seed.class === "C");
+  return tools.map((tool) => {
+    const row: ControlRow = { tool, comments: 0, valid: 0, invalid: 0, unmarked: 0 };
+    for (const r of controls) for (const c of r.perTool[tool]!.comments) {
+      row.comments++;
+      const m = marks.find((x) => x.id === r.seed.id && x.tool === tool && x.url === c.url);
+      if (!m) row.unmarked++;
+      else if (m.verdict === "valid") row.valid++;
+      else row.invalid++;
+    }
+    return row;
+  });
+}
+
+export function extraComments(results: SeedResult[], tool: string): { seed: Seed; comment: Comment }[] {
+  return results
+    .filter((r) => r.seed.class !== "C")
+    .flatMap((r) => r.perTool[tool]!.comments.filter((c) => !autoMatch(r.seed, c)).map((comment) => ({ seed: r.seed, comment })));
 }
 
 // ---------------------------------------------------------------- report
@@ -201,74 +331,81 @@ function table(header: string[], rows: string[][]): string {
   return [line(header), "|" + w.map((x) => "-".repeat(x + 2)).join("|") + "|", ...rows.map(line)].join("\n");
 }
 
-const oneLine = (s: string, n = 140) => s.replace(/\s+/g, " ").trim().slice(0, n);
+const oneLine = (s: string, n = 160) => s.replace(/\s+/g, " ").trim().slice(0, n);
+const where = (c: Comment) => (c.kind === "inline" ? `inline ${c.path}:${c.line ?? "-"}` : c.kind);
 
-export function report(results: SeedResult[], tools: Tools): string {
+export function report(results: SeedResult[], tools: Tools, marks: ControlMark[]): string {
   const names = Object.keys(tools);
-  const out: string[] = [];
   const seeded = results.filter((r) => r.seed.class !== "C");
   const controls = results.filter((r) => r.seed.class === "C");
+  const out: string[] = [];
 
-  out.push("## Rule (a): per seed\n");
-  out.push(table(["id", "class", "repo", "PR", ...names], seeded.map((r) => [
-    r.seed.id, r.seed.class, r.seed.repo.split("/")[1]!, r.pr ? `#${r.pr}` : "no PR",
-    ...names.map((n) => (r.perTool[n]!.caught ? "caught" : "missed")),
-  ])));
+  out.push("## Caught / n\n");
+  out.push(table(["tool", "class", "n", "automatic", "manual", "auto + manual"], summary(results, names)));
+  out.push("\n`manual` = seeds caught only by a manual call (the automatic rule missed them).");
 
-  out.push("\n## Rule (a): per tool and class (caught / n)\n");
-  const ct = classTable(seeded, names);
-  const cols = [...CLASSES, "all seeded"];
-  out.push(table(["tool", ...cols], names.map((n) => [n, ...cols.map((c) => ct[n]![c]!)])));
-
-  out.push("\n## Matching inline comments (rule a)\n");
-  for (const r of seeded) for (const n of names) for (const c of r.perTool[n]!.matching) {
-    out.push(`- ${r.seed.id} ${n} ${c.path}:${anchorLine(c)} ${c.html_url ?? ""}\n  > ${oneLine(c.body)}`);
+  out.push("\n## Per seed (A = automatic, M = manual, - = missed)\n");
+  for (const r of seeded) {
+    const marksTxt = names.map((n) => {
+      const t = r.perTool[n]!;
+      return `${n} ${t.autoCaught ? "A" : ""}${t.manualCaught ? "M" : ""}${t.caught ? "" : "-"}`;
+    }).join("  ");
+    out.push(`- ${r.seed.id} ${r.seed.class} ${r.pr ? `#${r.pr}` : "(no PR)"}: ${marksTxt}`);
   }
 
-  out.push("\n## Candidates for the manual rule (b) decision (NOT scored here)\n");
-  out.push("Review bodies and PR-level comments by a tool that name an accept path (full path or file name) and contain brokenSymbolOrKey.\n");
-  let anyB = false;
-  for (const r of seeded) for (const n of names) {
-    if (r.perTool[n]!.caught) continue;
-    for (const b of r.perTool[n]!.bCandidates) {
-      anyB = true;
-      out.push(`- ${r.seed.id} ${n} [${b.kind}] key=${r.seed.brokenSymbolOrKey} ${b.url ?? ""}\n  > ${oneLine(b.text, 400)}`);
+  out.push("\n## Automatic matches\n");
+  let any = false;
+  for (const r of seeded) for (const n of names) for (const c of r.perTool[n]!.auto) {
+    any = true;
+    out.push(`- ${r.seed.id} ${n} [${where(c)}] ${c.url}\n  > ${oneLine(c.body)}`);
+  }
+  if (!any) out.push("(none)");
+
+  out.push("\n## Manual calls\n");
+  any = false;
+  for (const r of seeded) for (const n of names) for (const m of r.perTool[n]!.manual) {
+    any = true;
+    const redundant = r.perTool[n]!.autoCaught ? " (already caught automatically)" : "";
+    out.push(`- ${r.seed.id} ${n} ${m.url}${redundant}\n  > ${oneLine(m.quote, 400)}\n  reason: ${m.reason}`);
+  }
+  if (!any) out.push("(none)");
+
+  out.push("\n## C controls (any invalid comment is a false alarm)\n");
+  out.push(table(["tool", "comments", "valid", "invalid (false alarms)", "unmarked"],
+    controlSummary(results, names, marks).map((r) => [r.tool, String(r.comments), String(r.valid), String(r.invalid), String(r.unmarked)])));
+  for (const r of controls) {
+    out.push(`\n${r.seed.id} ${r.pr ? `#${r.pr}` : "(no PR)"}: ` + names.map((n) => `${n} ${r.perTool[n]!.comments.length}`).join(", "));
+    for (const n of names) for (const c of r.perTool[n]!.comments) {
+      const m = marks.find((x) => x.id === r.seed.id && x.tool === n && x.url === c.url);
+      out.push(`- ${n} [${where(c)}] ${m ? m.verdict : "UNMARKED"} ${c.url}\n  > ${oneLine(c.body)}`);
     }
   }
-  if (!anyB) out.push("(none)");
 
-  out.push("\n## Comments on C controls (mark each valid / invalid)\n");
-  out.push(table(["id", "PR", ...names.map((n) => `${n} inline/body`)], controls.map((r) => [
-    r.seed.id, r.pr ? `#${r.pr}` : "no PR",
-    ...names.map((n) => `${r.perTool[n]!.inline.length}/${r.perTool[n]!.bodies.length}`),
-  ])));
-  for (const r of controls) for (const n of names) {
-    for (const c of r.perTool[n]!.inline) out.push(`- ${r.seed.id} ${n} inline ${c.path}:${anchorLine(c) ?? "-"} ${c.html_url ?? ""}\n  > ${oneLine(c.body)}`);
-    for (const b of r.perTool[n]!.bodies) out.push(`- ${r.seed.id} ${n} body ${b.html_url ?? ""}\n  > ${oneLine(b.body ?? "")}`);
-  }
-
-  out.push("\n## Extra inline comments on seeded PRs (not matching rule a)\n");
-  out.push(table(["tool", "extra inline comments"], names.map((n) => [
-    n, String(seeded.reduce((k, r) => k + r.perTool[n]!.inline.filter((c) => !matchesA(r.seed, c)).length, 0)),
-  ])));
-  for (const r of seeded) for (const n of names) for (const c of r.perTool[n]!.inline.filter((c) => !matchesA(r.seed, c))) {
-    out.push(`- ${r.seed.id} ${n} ${c.path}:${anchorLine(c) ?? "-"} ${c.html_url ?? ""}\n  > ${oneLine(c.body)}`);
+  out.push("\n## Extra comments on seeded PRs (not satisfying the automatic rule)\n");
+  out.push(table(["tool", "extra comments"], names.map((n) => [n, String(extraComments(results, n).length)])));
+  for (const n of names) for (const { seed, comment } of extraComments(results, n)) {
+    out.push(`- ${seed.id} ${n} [${where(comment)}] ${comment.url}\n  > ${oneLine(comment.body)}`);
   }
   return out.join("\n");
 }
 
 // ---------------------------------------------------------------- main
 
+function opt(name: string): string | undefined {
+  const i = process.argv.indexOf(`--${name}`);
+  return i >= 0 ? process.argv[i + 1] : undefined;
+}
+
 async function main() {
   const here = fileURLToPath(new URL(".", import.meta.url));
-  const keyPath = process.argv.includes("--key") ? process.argv[process.argv.indexOf("--key") + 1]! : join(here, "key.json");
-  const seeds: Seed[] = JSON.parse(readFileSync(keyPath, "utf8"));
-  const fx = process.argv.includes("--fixtures") ? process.argv[process.argv.indexOf("--fixtures") + 1]! : null;
+  const seeds: Seed[] = JSON.parse(readFileSync(opt("key") ?? join(here, "key.json"), "utf8"));
   const tools = toolsFromEnv();
-  if (tools.TraceHound!.length === 0) {
-    if (!fx) throw new Error("Set TRACEHOUND_LOGINS to the GitHub login(s) TraceHound comments as.");
-    tools.TraceHound = ["tracehound-fixture[bot]"];
-  }
+  const manual = readJsonArray<ManualCall>(opt("manual") ?? join(here, "manual.json"));
+  const marks = readJsonArray<ControlMark>(opt("marks") ?? join(here, "control-marks.json"));
+  validateManual(manual, seeds, tools);
+  validateMarks(marks, seeds, tools);
+
+  const fx = opt("fixtures");
   let source: Source;
   if (fx) source = new FixtureSource(resolve(fx));
   else {
@@ -276,9 +413,15 @@ async function main() {
     if (!token) throw new Error("GITHUB_TOKEN is not set");
     source = new GitHubSource(token);
   }
-  const results = await scoreAll(seeds, source, tools);
-  console.log(`tools: ${Object.entries(tools).map(([n, l]) => `${n}=${l.join("+")}`).join("  ")}\n`);
-  console.log(report(results, tools));
+
+  console.log("Logins used:");
+  for (const [tool, logins] of Object.entries(tools)) {
+    console.log(`  ${tool.padEnd(10)} ${logins.join(", ")}${process.env[ENV_VARS[tool]!] ? `  (from ${ENV_VARS[tool]})` : "  (default)"}`);
+  }
+  console.log(`Manual calls: ${manual.length}   Control marks: ${marks.length}\n`);
+
+  const results = await scoreAll(seeds, source, tools, manual);
+  console.log(report(results, tools, marks));
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {

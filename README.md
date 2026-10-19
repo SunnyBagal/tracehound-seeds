@@ -37,6 +37,7 @@ baseline below.
   or "TraceHound". `verify.ts` checks this.
 - `key.json` stays private until the results are published. Only its sha256
   (and that of `SCORING.md`) is published in advance.
+- Until Sunny says scoring has started, nobody working on TraceHound may open `linea-seeded`, `recall-seeded` or `tracehound-seeds`.
 
 ## Files
 
@@ -46,8 +47,10 @@ baseline below.
 | `prs/<id>.md` | PR title on line 1, a blank line, then the PR body |
 | `SCORING.md` | The pre-registered scoring rules (hashed) |
 | `verify.ts` | Checks every branch against its class rule; prints a table |
-| `open-prs.sh` | Opens the 30 PRs in a fixed shuffled order (run by Sunny on 25 Oct) |
-| `score.ts` | Reads the PRs' review comments from GitHub and prints the rule (a) tables |
+| `open-prs.sh` | Opens the 30 PRs in a fixed shuffled order and triggers CodeRabbit on each (run by Sunny on 25 Oct) |
+| `score.ts` | Reads every comment on the PRs from GitHub and applies the automatic rules in `SCORING.md` |
+| `manual.json` | Sunny's manual calls (starts empty; schema below) |
+| `control-marks.json` | Sunny's valid / invalid marks for comments on C controls (starts empty; schema below) |
 | `score.test.ts`, `fixtures/` | Offline checks of `score.ts` against fixture data (no network) |
 
 ## Setup
@@ -97,43 +100,110 @@ shifts one of Recall's existing errors up or down doesn't count as adding one.
 
 ## Open the PRs (25 Oct)
 
-1. Install Greptile, Bugbot and TraceHound (frozen at freeze-2) on both mirrors.
-2. Run `./open-prs.sh --dry-run` to see the order. It is fixed by `SHUFFLE_SEED`
-   in the script.
+1. Install TraceHound (frozen at freeze-2), CodeRabbit (OSS plan), Greptile
+   (Starter) and Bugbot on both mirrors.
+2. Run `./open-prs.sh --dry-run` to see the order and the commands. The order
+   is fixed by `SHUFFLE_SEED` in the script.
 3. Run `./open-prs.sh` while logged in to `gh` as SunnyBagal. The PRs must be
    authored by that account, because Bugbot only reviews PRs its own user
-   opened. Each opened PR is logged to `opened-prs.tsv`. Re-running skips
-   branches that already have a PR.
+   opened.
+   - Right after opening each PR, the script comments `@coderabbitai review`.
+     CodeRabbit's OSS plan doesn't review repos with fewer than 10 stars on
+     its own.
+   - It opens at most 8 PRs per hour (one every 450s), so the full run takes
+     about 3h40m.
+   - Each PR is logged to `opened-prs.tsv` (id, repo, branch, URL, time, trigger
+     status). A failed trigger is flagged there to post by hand.
+   - Re-running skips branches that already have a PR and still keeps the 450s
+     gap since the last PR it logged.
 
 ## Score
 
 ```sh
-export GITHUB_TOKEN=...                         # read access to both mirrors
-export TRACEHOUND_LOGINS='<tracehound bot login>'
-# optional overrides; defaults are greptile-apps[bot] and cursor[bot]
-export GREPTILE_LOGINS=... BUGBOT_LOGINS=...
+export GITHUB_TOKEN=...            # read access to both mirrors
 bun score.ts > results.md
 ```
 
-Before scoring, confirm each tool's comment login on a real PR. `score.ts`
-prints:
+Default logins, each overridable with a comma-separated env var:
 
-- the rule (a) table per seed, and caught / n per tool and class;
-- every matching inline comment;
-- candidate review bodies and summaries for the manual rule (b) decision. These
-  name an accept path and contain `brokenSymbolOrKey`, and are listed but never
-  scored;
-- all comments on the C controls, for marking valid or invalid;
-- the extra inline comments on seeded PRs.
+| Tool | Default login | Override |
+|---|---|---|
+| TraceHound | `github-actions[bot]` (it posts through the workflow's `GITHUB_TOKEN`) | `TRACEHOUND_LOGINS` |
+| CodeRabbit | `coderabbitai[bot]` | `CODERABBIT_LOGINS` |
+| Greptile | `greptile-apps[bot]` | `GREPTILE_LOGINS` |
+| Bugbot | `cursor[bot]` | `BUGBOT_LOGINS` |
+
+The script prints the logins it used. If any other GitHub Actions workflow
+comments on the mirrors, its comments would also count as TraceHound's.
+
+`score.ts` reads inline review comments, review bodies and conversation
+comments for each PR, ignoring empty bodies. It then applies:
+
+- **D, location rule:** an inline comment on an `accept` path whose head-side
+  line is within `[start-3, end+3]`. Outdated comments use `original_line`.
+  Base-side (LEFT) and file-level comments never match.
+- **X, mention rule:** any comment whose text contains `brokenSymbolOrKey`
+  (case-sensitive) and names an accept file by full path or basename. If that
+  basename is also the basename of a file the PR edits, only the full accept
+  path counts. That way a summary that restates the PR's own change (e.g. a
+  walkthrough listing an edited `index.ts`) can't match by accident.
+
+It prints:
+
+- one table of caught / n per tool and class, with columns `automatic`,
+  `manual` (seeds caught only by a manual call) and `auto + manual`;
+- a per-seed line, the automatic matches, and every manual call with its quote
+  and reason;
+- the C controls: comments per tool, how many are marked valid / invalid /
+  unmarked, and every comment with its mark;
+- the extra comments on seeded PRs (everything that doesn't satisfy the
+  automatic rule).
+
+### `manual.json`
+
+An array of manual calls, one per (seed, tool) the automatic rule missed but
+Sunny judges caught. It applies to seeded classes only. Controls go in
+`control-marks.json`.
+
+```json
+[
+  {
+    "id": "s07",
+    "tool": "Greptile",
+    "url": "https://github.com/SunnyBagal/recall-seeded/pull/12#discussion_r123",
+    "quote": "exact text of the comment, or the relevant excerpt",
+    "reason": "one line: why this identifies the defect"
+  }
+]
+```
+
+`tool` is one of `TraceHound`, `CodeRabbit`, `Greptile`, `Bugbot`. The `url`,
+`quote` and `reason` fields are required.
+
+### `control-marks.json`
+
+An array with one mark per comment on a C control. The `url` is the comment's
+URL as `score.ts` prints it.
+
+```json
+[
+  { "id": "s04", "tool": "Bugbot", "url": "https://github.com/.../pull/3#discussion_r456",
+    "verdict": "invalid", "note": "optional" }
+]
+```
+
+`verdict` is `valid` or `invalid`. Every invalid comment counts as a false
+alarm.
 
 Offline check of the scorer: `bun test score.test.ts`, or
-`bun score.ts --fixtures fixtures --key fixtures/key.json`.
+`bun score.ts --fixtures fixtures --key fixtures/key.json --manual fixtures/manual.json --marks fixtures/control-marks.json`.
 
 ## Notes
 
 - GitHub only accepts inline review comments on files that are part of the PR's
-  diff. For the X classes the accept paths are, by construction, files the PR
-  did not touch, so in practice those seeds can only be caught through rule (b).
+  diff. The X accept paths are files the PR did not touch, so the X classes are
+  scored by the mention rule, which looks at every comment on the PR, not by
+  location.
 - Commits on the mirrors are authored by the session's git identity, with
   `Co-Authored-By: Claude` trailers. The PRs themselves are opened from
   SunnyBagal's account.

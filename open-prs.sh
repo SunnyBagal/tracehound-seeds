@@ -2,22 +2,28 @@
 # Opens one pull request per entry in key.json on the public mirrors, in a
 # shuffled order fixed by SHUFFLE_SEED below.
 #
-# Run this yourself, from your own GitHub account, once Greptile, Bugbot and
-# TraceHound are installed on both mirrors. Bugbot only reviews PRs authored by
-# the account it is linked to, so the PRs must not be opened by anyone else.
+# Run this yourself, from your own GitHub account, once TraceHound, CodeRabbit,
+# Greptile and Bugbot are installed on both mirrors. Bugbot only reviews PRs
+# authored by the account it is linked to, so the PRs must not be opened by
+# anyone else. CodeRabbit's OSS plan doesn't auto-review repos with fewer than
+# 10 stars, so each PR gets an "@coderabbitai review" comment right after it is
+# opened.
 #
 #   ./open-prs.sh --dry-run   # print the order and the commands, open nothing
 #   ./open-prs.sh             # open the PRs
 #
 # Needs: gh (logged in as SunnyBagal), node. Already-open PRs for a branch are
 # skipped, so the script can be re-run after an interruption. Every PR opened
-# is appended to opened-prs.tsv.
+# is appended to opened-prs.tsv. Pacing: at most 8 PRs per hour, so all 30
+# take about 3h40m.
 
 set -euo pipefail
 
 SHUFFLE_SEED=20261025   # recorded: the order below is a pure function of this
 EXPECTED_LOGIN="SunnyBagal"
-DELAY_SECONDS=20        # spacing between PRs, to stay clear of GitHub's secondary rate limits
+MAX_PRS_PER_HOUR=8
+DELAY_SECONDS=$(( 3600 / MAX_PRS_PER_HOUR ))   # 450s between PRs
+CODERABBIT_TRIGGER="@coderabbitai review"
 
 cd "$(dirname "$0")"
 
@@ -45,7 +51,7 @@ for ((i = n - 1; i > 0; i--)); do
   tmp=${order[$i]}; order[$i]=${order[$j]}; order[$j]=$tmp
 done
 
-echo "Opening $n PRs in this order (SHUFFLE_SEED=$SHUFFLE_SEED):"
+echo "Opening $n PRs in this order (SHUFFLE_SEED=$SHUFFLE_SEED, one every ${DELAY_SECONDS}s):"
 for ((k = 0; k < n; k++)); do
   i=${order[$k]}
   printf '  %2d. %s  %s  %s\n' "$((k + 1))" "${ids[$i]}" "${repos[$i]}" "${branches[$i]}"
@@ -60,6 +66,18 @@ if [ "$DRY_RUN" -eq 0 ]; then
   fi
 fi
 
+# Pacing also holds across re-runs: wait out the gap since the last PR logged.
+wait_for_slot() {
+  [ -s opened-prs.tsv ] || return 0
+  local last now
+  last=$(tail -n 1 opened-prs.tsv | cut -f 7)
+  now=$(date +%s)
+  if [ -n "$last" ] && [ $(( now - last )) -lt "$DELAY_SECONDS" ]; then
+    echo "waiting $(( DELAY_SECONDS - (now - last) ))s since the last PR opened"
+    sleep $(( DELAY_SECONDS - (now - last) ))
+  fi
+}
+
 body_file=$(mktemp)
 trap 'rm -f "$body_file"' EXIT
 
@@ -72,6 +90,8 @@ for ((k = 0; k < n; k++)); do
 
   if [ "$DRY_RUN" -eq 1 ]; then
     echo "gh pr create --repo $repo --head $branch --base main --title \"$title\" --body-file $pr (minus its title line)"
+    echo "gh pr comment <new PR url> --body \"$CODERABBIT_TRIGGER\""
+    if [ "$k" -lt $((n - 1)) ]; then echo "sleep $DELAY_SECONDS"; fi
     continue
   fi
 
@@ -85,8 +105,15 @@ for ((k = 0; k < n; k++)); do
     continue
   fi
 
+  wait_for_slot
   url=$(gh pr create --repo "$repo" --head "$branch" --base main --title "$title" --body-file "$body_file")
-  printf '%s\t%s\t%s\t%s\t%s\n' "$id" "$repo" "$branch" "$url" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> opened-prs.tsv
-  echo "[$id] $url"
-  if [ "$k" -lt $((n - 1)) ]; then sleep "$DELAY_SECONDS"; fi
+  if gh pr comment "$url" --body "$CODERABBIT_TRIGGER" >/dev/null; then
+    trigger="triggered"
+  else
+    trigger="TRIGGER-FAILED"
+    echo "[$id] could not post the CodeRabbit trigger on $url; post \"$CODERABBIT_TRIGGER\" by hand" >&2
+  fi
+  # columns: id, repo, branch, url, opened (UTC), CodeRabbit trigger, opened (epoch)
+  printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\n' "$id" "$repo" "$branch" "$url" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$trigger" "$(date +%s)" >> opened-prs.tsv
+  echo "[$id] $url ($trigger)"
 done

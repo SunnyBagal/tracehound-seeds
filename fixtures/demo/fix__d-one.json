@@ -1,0 +1,16 @@
+{
+  "number": 3,
+  "reviewComments": [
+    {"id": 31, "user": {"login": "github-actions[bot]"}, "path": "src/b.ts", "line": 25, "original_line": 25,
+     "side": "RIGHT", "subject_type": "line", "html_url": "https://example/d1/31", "body": "This range check can never be true."},
+    {"id": 32, "user": {"login": "cursor[bot]"}, "path": "src/b.ts", "line": 26, "original_line": 26,
+     "side": "RIGHT", "subject_type": "line", "html_url": "https://example/d1/32", "body": "limit is never validated"},
+    {"id": 33, "user": {"login": "coderabbitai[bot]"}, "path": "src/b.ts", "line": 21, "original_line": 21,
+     "side": "LEFT", "subject_type": "line", "html_url": "https://example/d1/33", "body": "old line"}
+  ],
+  "reviews": [
+    {"id": 34, "user": {"login": "cursor[bot]"}, "html_url": "https://example/d1/34",
+     "body": "src/b.ts: the limit check uses && instead of ||."}
+  ],
+  "issueComments": []
+}

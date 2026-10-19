@@ -1,58 +1,112 @@
-// Offline checks of score.ts against fixtures/ (no network): bun test
+// Offline checks of score.ts against fixtures/ (no network): bun test score.test.ts
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { FixtureSource, classTable, report, scoreAll, toolsFromEnv, type Seed } from "./score";
+import {
+  FixtureSource, controlSummary, readJsonArray, report, scoreAll, summary, toolsFromEnv,
+  validateManual, validateMarks, type ControlMark, type ManualCall, type Seed,
+} from "./score";
 
 const dir = join(import.meta.dir, "fixtures");
 const seeds: Seed[] = JSON.parse(readFileSync(join(dir, "key.json"), "utf8"));
-const tools = toolsFromEnv({ TRACEHOUND_LOGINS: "tracehound-fixture[bot]" });
-const results = await scoreAll(seeds, new FixtureSource(dir), tools);
-const get = (id: string) => results.find((r) => r.seed.id === id)!;
+const tools = toolsFromEnv({});
+const manual = readJsonArray<ManualCall>(join(dir, "manual.json"));
+const marks = readJsonArray<ControlMark>(join(dir, "control-marks.json"));
+const results = await scoreAll(seeds, new FixtureSource(dir), tools, manual);
+const get = (id: string, tool: string) => results.find((r) => r.seed.id === id)!.perTool[tool]!;
 
-describe("rule (a)", () => {
-  test("a comment exactly 3 lines past the range counts, 4 does not", () => {
-    expect(get("f1").perTool.Greptile!.caught).toBe(true);
-    expect(get("f1").perTool.Bugbot!.caught).toBe(false);
+describe("logins", () => {
+  test("defaults, and env overrides", () => {
+    expect(tools).toEqual({
+      TraceHound: ["github-actions[bot]"],
+      CodeRabbit: ["coderabbitai[bot]"],
+      Greptile: ["greptile-apps[bot]"],
+      Bugbot: ["cursor[bot]"],
+    });
+    expect(toolsFromEnv({ TRACEHOUND_LOGINS: "a[bot], b[bot]" }).TraceHound).toEqual(["a[bot]", "b[bot]"]);
   });
-  test("a review body is never scored, even when it names path and key", () => {
-    expect(get("f1").perTool.TraceHound!.caught).toBe(false);
-    expect(get("f1").perTool.TraceHound!.bCandidates.map((b) => b.kind)).toEqual(["body"]);
+});
+
+describe("X mention rule", () => {
+  test("caught by a review body naming the unedited file and the symbol", () => {
+    expect(get("x1", "TraceHound").autoCaught).toBe(true);
+    expect(get("x1", "TraceHound").auto.map((c) => c.kind)).toEqual(["review"]);
   });
-  test("outdated comments fall back to original_line", () => {
-    expect(get("f2").perTool.TraceHound!.caught).toBe(true);
+  test("not caught by a comment naming only the symbol", () => {
+    expect(get("x1", "Greptile").comments.length).toBe(1);
+    expect(get("x1", "Greptile").autoCaught).toBe(false);
   });
-  test("base-side (LEFT) and file-level comments never match", () => {
-    expect(get("f2").perTool.Greptile!.caught).toBe(false);
-    expect(get("f2").perTool.Bugbot!.caught).toBe(false);
+  test("a CodeRabbit walkthrough that restates the diff does not count", () => {
+    // It contains the key and "index.ts", but that basename is also an edited
+    // file's, so only the full unedited path would count.
+    const cr = get("x2", "CodeRabbit");
+    expect(cr.comments.map((c) => c.kind)).toEqual(["conversation"]);
+    expect(cr.autoCaught).toBe(false);
   });
-  test("comments by other accounts are ignored; wrong path does not match", () => {
-    const r = get("f3");
-    for (const t of ["TraceHound", "Greptile", "Bugbot"]) expect(r.perTool[t]!.caught).toBe(false);
-    expect(r.perTool.Bugbot!.inline.map((c) => c.id)).toEqual([302]);
-    expect(r.perTool.Greptile!.bCandidates.map((b) => b.kind)).toEqual(["body"]);
+});
+
+describe("D location rule", () => {
+  test("caught by an inline comment 3 lines past the range", () => {
+    expect(get("d1", "TraceHound").autoCaught).toBe(true);
   });
-  test("a seed without a PR is missed by every tool", () => {
-    const r = get("f5");
-    expect(r.pr).toBeNull();
-    for (const t of Object.keys(tools)) expect(r.perTool[t]!.caught).toBe(false);
+  test("missed at 4 lines past the range, and a review body never counts for D", () => {
+    const b = get("d1", "Bugbot");
+    expect(b.comments.length).toBe(2);
+    expect(b.autoCaught).toBe(false);
+  });
+  test("base-side (LEFT) comments have no head line and miss", () => {
+    expect(get("d1", "CodeRabbit").autoCaught).toBe(false);
+  });
+  test("a seed with no PR is missed by every tool", () => {
+    expect(results.find((r) => r.seed.id === "d2")!.pr).toBeNull();
+    for (const t of Object.keys(tools)) expect(get("d2", t).caught).toBe(false);
+  });
+});
+
+describe("manual calls", () => {
+  test("count in their own column, never in automatic", () => {
+    const g = get("x2", "Greptile");
+    expect(g.autoCaught).toBe(false);
+    expect(g.manualCaught).toBe(true);
+    expect(g.caught).toBe(true);
+  });
+  test("validation rejects controls, unknown tools and empty reasons", () => {
+    const base = { id: "x1", tool: "Greptile", url: "u", quote: "q", reason: "r" };
+    expect(() => validateManual([{ ...base, id: "c1" }], seeds, tools)).toThrow("control");
+    expect(() => validateManual([{ ...base, tool: "Other" }], seeds, tools)).toThrow("unknown tool");
+    expect(() => validateManual([{ ...base, reason: " " }], seeds, tools)).toThrow("reason");
+    expect(() => validateManual(manual, seeds, tools)).not.toThrow();
+    expect(() => validateMarks(marks, seeds, tools)).not.toThrow();
+    expect(() => validateMarks([{ id: "x1", tool: "Greptile", url: "u", verdict: "invalid" }], seeds, tools)).toThrow("not a control");
   });
 });
 
 describe("tables", () => {
-  test("per tool and class", () => {
-    const t = classTable(results.filter((r) => r.seed.class !== "C"), Object.keys(tools));
-    expect(t.TraceHound).toEqual({ "X-typed": "0/1", "X-keyed": "0/1", "X-semantic": "0/1", D: "1/1", "all seeded": "1/4" });
-    expect(t.Greptile).toEqual({ "X-typed": "1/1", "X-keyed": "0/1", "X-semantic": "0/1", D: "0/1", "all seeded": "1/4" });
-    expect(t.Bugbot).toEqual({ "X-typed": "0/1", "X-keyed": "0/1", "X-semantic": "0/1", D: "0/1", "all seeded": "0/4" });
+  test("one row per tool and class: automatic, manual, both", () => {
+    const rows = summary(results, Object.keys(tools));
+    const row = (tool: string, cls: string) => rows.find((r) => r[0] === tool && r[1] === cls)!.slice(2);
+    expect(row("TraceHound", "X-typed")).toEqual(["1", "1/1", "+0", "1/1"]);
+    expect(row("TraceHound", "all X")).toEqual(["2", "1/2", "+0", "1/2"]);
+    expect(row("TraceHound", "D")).toEqual(["2", "1/2", "+0", "1/2"]);
+    expect(row("TraceHound", "all seeded")).toEqual(["4", "2/4", "+0", "2/4"]);
+    expect(row("Greptile", "X-keyed")).toEqual(["1", "0/1", "+1", "1/1"]);
+    expect(row("Greptile", "all seeded")).toEqual(["4", "0/4", "+1", "1/4"]);
+    expect(row("CodeRabbit", "all seeded")).toEqual(["4", "0/4", "+0", "0/4"]);
+    expect(row("Bugbot", "D")).toEqual(["2", "0/2", "+0", "0/2"]);
   });
-  test("C controls list every non-empty comment and nothing is scored", () => {
-    const r = get("f4");
-    expect(r.perTool.Greptile!.inline.length).toBe(1);
-    expect(r.perTool.Bugbot!.bodies.length).toBe(0);
-    expect(r.perTool.TraceHound!.bodies.length).toBe(1);
-    const text = report(results, tools);
-    expect(text).toContain("| f4 | #4 | 0/1");
-    expect(text).not.toContain("| f4 | X");
+  test("a control with 2 comments; the invalid one is a false alarm", () => {
+    const c1 = results.find((r) => r.seed.id === "c1")!;
+    const total = Object.values(c1.perTool).reduce((n, t) => n + t.comments.length, 0);
+    expect(total).toBe(2); // Greptile inline + CodeRabbit walkthrough; empty review and Sunny's trigger ignored
+    const cs = controlSummary(results, Object.keys(tools), marks);
+    expect(cs.find((r) => r.tool === "Greptile")).toEqual({ tool: "Greptile", comments: 1, valid: 0, invalid: 1, unmarked: 0 });
+    expect(cs.find((r) => r.tool === "CodeRabbit")).toEqual({ tool: "CodeRabbit", comments: 1, valid: 0, invalid: 0, unmarked: 1 });
+  });
+  test("extra comments are everything not satisfying the automatic rule", () => {
+    const text = report(results, tools, marks);
+    expect(text).toContain("| Bugbot     | 2              |");
+    expect(text).toContain("| CodeRabbit | 2              |");
+    expect(text).toContain("| Greptile   | 2              |");
+    expect(text).toContain("| TraceHound | 0              |");
   });
 });

@@ -1,12 +1,16 @@
 [
-  {"id": "f1", "repo": "SunnyBagal/demo", "branch": "feat/one", "class": "X-typed", "title": "one",
-   "accept": [{"path": "src/a.ts", "lines": [10, 10]}], "brokenSymbolOrKey": "fooBar"},
-  {"id": "f2", "repo": "SunnyBagal/demo", "branch": "fix/two", "class": "D", "title": "two",
-   "accept": [{"path": "src/b.ts", "lines": [20, 22]}], "brokenSymbolOrKey": "limit"},
-  {"id": "f3", "repo": "SunnyBagal/demo", "branch": "chore/three", "class": "X-keyed", "title": "three",
-   "accept": [{"path": "src/c.ts", "lines": [5, 5]}, {"path": "src/e.ts", "lines": [40, 41]}], "brokenSymbolOrKey": "op_ack"},
-  {"id": "f4", "repo": "SunnyBagal/demo", "branch": "refactor/four", "class": "C", "title": "four",
-   "accept": [], "brokenSymbolOrKey": null},
-  {"id": "f5", "repo": "SunnyBagal/demo", "branch": "feat/five", "class": "X-semantic", "title": "five",
-   "accept": [{"path": "src/f.ts", "lines": [1, 3]}], "brokenSymbolOrKey": "MIN_SCALE"}
+  {"id": "x1", "repo": "SunnyBagal/demo", "branch": "feat/x-one", "class": "X-typed", "title": "x1",
+   "accept": [{"path": "src/worker.ts", "lines": [44, 49]}], "brokenSymbolOrKey": "extractText",
+   "edited": ["src/services/textExtractor.ts"]},
+  {"id": "x2", "repo": "SunnyBagal/demo", "branch": "feat/x-two", "class": "X-keyed", "title": "x2",
+   "accept": [{"path": "apps/ws-backend/src/index.ts", "lines": [5, 5]}], "brokenSymbolOrKey": "WsMessageSchema",
+   "edited": ["apps/http-backend/src/index.ts", "packages/common/src/types.ts"]},
+  {"id": "d1", "repo": "SunnyBagal/demo", "branch": "fix/d-one", "class": "D", "title": "d1",
+   "accept": [{"path": "src/b.ts", "lines": [20, 22]}], "brokenSymbolOrKey": "limit",
+   "edited": ["src/b.ts"]},
+  {"id": "d2", "repo": "SunnyBagal/demo", "branch": "fix/d-two", "class": "D", "title": "d2",
+   "accept": [{"path": "src/e.ts", "lines": [7, 7]}], "brokenSymbolOrKey": "await",
+   "edited": ["src/e.ts"]},
+  {"id": "c1", "repo": "SunnyBagal/demo", "branch": "refactor/c-one", "class": "C", "title": "c1",
+   "accept": [], "brokenSymbolOrKey": null, "edited": ["src/x.ts"]}
 ]

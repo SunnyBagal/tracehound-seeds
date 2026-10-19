@@ -1,0 +1,13 @@
+{
+  "number": 1,
+  "reviewComments": [],
+  "reviews": [
+    {"id": 11, "user": {"login": "github-actions[bot]"}, "html_url": "https://example/x1/11",
+     "body": "`extractText` now takes a required signal, but `src/worker.ts` still calls it with four arguments."}
+  ],
+  "issueComments": [
+    {"id": 12, "user": {"login": "greptile-apps[bot]"}, "html_url": "https://example/x1/12",
+     "body": "Adding a required parameter to `extractText` may break existing callers."},
+    {"id": 13, "user": {"login": "SunnyBagal"}, "html_url": "https://example/x1/13", "body": "@coderabbitai review"}
+  ]
+}
