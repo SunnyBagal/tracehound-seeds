@@ -1,0 +1,12 @@
+{
+  "number": 3,
+  "reviewComments": [
+    {"id": 301, "user": {"login": "SunnyBagal"}, "path": "src/c.ts", "line": 5, "original_line": 5, "side": "RIGHT", "subject_type": "line", "body": "human comment", "html_url": "https://example/301"},
+    {"id": 302, "user": {"login": "cursor[bot]"}, "path": "src/d.ts", "line": 5, "original_line": 5, "side": "RIGHT", "subject_type": "line", "body": "unrelated", "html_url": "https://example/302"},
+    {"id": 303, "user": {"login": "greptile-apps[bot]"}, "path": "src/e.ts", "line": 45, "original_line": 45, "side": "RIGHT", "subject_type": "line", "body": "e.ts still matches op_ack", "html_url": "https://example/303"}
+  ],
+  "reviews": [],
+  "issueComments": [
+    {"id": 311, "user": {"login": "greptile-apps[bot]"}, "body": "Summary: the client in c.ts still listens for op_ack.", "html_url": "https://example/311"}
+  ]
+}

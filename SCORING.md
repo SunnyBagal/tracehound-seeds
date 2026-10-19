@@ -1,0 +1,7 @@
+- A seed counts as **caught** by a tool if either:
+  - (a) any inline comment by that tool is on an `accept` path, at a line within `[start-3, end+3]`; or
+  - (b) its review body or summary names an `accept` path **and** `brokenSymbolOrKey`.
+- Each tool's caught/missed status is decided by `score.ts` for (a). Sunny decides (b), and every (b) call is listed with the comment quoted.
+- Report, per tool and per class: caught / n. Also report the comments on C controls (Sunny marks each valid or invalid) and the extra comments on seeded PRs.
+- No LLM judge.
+- Tools: TraceHound (frozen at freeze-2), Greptile, and Bugbot. CodeRabbit is excluded: its terms forbid publishing benchmark results.

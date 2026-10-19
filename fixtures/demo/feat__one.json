@@ -1,0 +1,12 @@
+{
+  "number": 1,
+  "reviewComments": [
+    {"id": 101, "user": {"login": "greptile-apps[bot]"}, "path": "src/a.ts", "line": 13, "original_line": 13, "side": "RIGHT", "subject_type": "line", "body": "fooBar is no longer exported", "html_url": "https://example/101"},
+    {"id": 102, "user": {"login": "cursor[bot]"}, "path": "src/a.ts", "line": 14, "original_line": 14, "side": "RIGHT", "subject_type": "line", "body": "nit", "html_url": "https://example/102"},
+    {"id": 103, "user": {"login": "cursor[bot]"}, "path": "src/a.ts", "line": 6, "original_line": 6, "side": "RIGHT", "subject_type": "line", "body": "src/a.ts still imports fooBar", "html_url": "https://example/103"}
+  ],
+  "reviews": [
+    {"id": 111, "user": {"login": "tracehound-fixture[bot]"}, "body": "The rename breaks src/a.ts, which still imports fooBar.", "html_url": "https://example/111"}
+  ],
+  "issueComments": []
+}

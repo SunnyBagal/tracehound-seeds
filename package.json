@@ -1,0 +1,10 @@
+{
+  "name": "tracehound-seeds",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "verify": "bun verify.ts",
+    "score": "bun score.ts",
+    "check-scorer": "bun test score.test.ts"
+  }
+}

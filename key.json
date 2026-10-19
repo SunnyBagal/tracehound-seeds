@@ -1,0 +1,776 @@
+[
+  {
+    "id": "s01",
+    "repo": "SunnyBagal/linea-seeded",
+    "branch": "feat/socket-reconnect-option",
+    "class": "X-semantic",
+    "title": "useSocket: make reconnect behaviour configurable",
+    "summary": "useSocket's reconnect now defaults to false; the existing callers (CanvasBoard, ChatRoomClient) pass no options and silently lose auto-reconnect.",
+    "accept": [
+      {
+        "path": "apps/web/app/components/canvas/CanvasBoard.tsx",
+        "lines": [
+          33,
+          33
+        ]
+      },
+      {
+        "path": "apps/web/app/components/ChatRoomClient.tsx",
+        "lines": [
+          9,
+          9
+        ]
+      }
+    ],
+    "brokenSymbolOrKey": "useSocket",
+    "edited": [
+      "apps/web/hooks/useSocket.ts"
+    ],
+    "why": "After any drop (server deploy, network blip) the socket is never re-opened: socket becomes undefined while loading stays false, CanvasBoard's effect tears down its handlers and the board stops syncing and accepting input with no indication."
+  },
+  {
+    "id": "s02",
+    "repo": "SunnyBagal/linea-seeded",
+    "branch": "refactor/submit-state-naming",
+    "class": "X-typed",
+    "title": "ui: rename submit state \"loading\" to \"pending\"",
+    "summary": "Union member \"loading\" removed from the exported SubmitState type in packages/ui; the sign-in and sign-up pages still call setState(\"loading\").",
+    "accept": [
+      {
+        "path": "apps/web/app/signin/page.tsx",
+        "lines": [
+          16,
+          16
+        ]
+      },
+      {
+        "path": "apps/web/app/signup/page.tsx",
+        "lines": [
+          16,
+          16
+        ]
+      }
+    ],
+    "brokenSymbolOrKey": "loading",
+    "edited": [
+      "packages/ui/src/auth.tsx",
+      "packages/ui/src/brand.css"
+    ],
+    "why": "apps/web fails to typecheck (TS2345 in signin/page.tsx:16 and signup/page.tsx:16). Even if forced through, the button would get data-state=\"loading\", which no CSS rule matches any more, so the spinner never shows."
+  },
+  {
+    "id": "s03",
+    "repo": "SunnyBagal/recall-seeded",
+    "branch": "chore/queue-redis-prefix",
+    "class": "X-keyed",
+    "title": "Store queue data under a dedicated Redis key prefix",
+    "summary": "Producer Queue gets prefix 'recall'; the Worker in worker.ts is still constructed without a prefix, so it listens on the default 'bull' keys.",
+    "accept": [
+      {
+        "path": "recall-backend/worker.ts",
+        "lines": [
+          111,
+          121
+        ]
+      }
+    ],
+    "brokenSymbolOrKey": "prefix",
+    "edited": [
+      "recall-backend/config/queue.ts"
+    ],
+    "why": "Jobs are written to recall:content-processing:* but the worker polls bull:content-processing:*, so no job is ever picked up: every saved item stays 'pending' forever, with no summary, tags or embedding."
+  },
+  {
+    "id": "s04",
+    "repo": "SunnyBagal/linea-seeded",
+    "branch": "feat/hide-grid-in-history",
+    "class": "C",
+    "title": "canvas: hide the background grid while viewing history",
+    "summary": "Optional trailing parameter with a behaviour-preserving default; one caller opts in.",
+    "accept": [],
+    "brokenSymbolOrKey": null,
+    "edited": [
+      "apps/web/app/components/canvas/CanvasBoard.tsx",
+      "apps/web/lib/canvas/canvas.ts"
+    ],
+    "why": "Clean control: default keeps existing behaviour; the one caller that passes the option does so intentionally."
+  },
+  {
+    "id": "s05",
+    "repo": "SunnyBagal/recall-seeded",
+    "branch": "feat/escape-clears-search",
+    "class": "C",
+    "title": "Clear the search box with Escape",
+    "summary": "Small dependency-free UI feature.",
+    "accept": [],
+    "brokenSymbolOrKey": null,
+    "edited": [
+      "recall-frontend/src/components/InputBar.tsx"
+    ],
+    "why": "Clean control."
+  },
+  {
+    "id": "s06",
+    "repo": "SunnyBagal/recall-seeded",
+    "branch": "refactor/chat-context-fields",
+    "class": "C",
+    "title": "Share the chat context column list between both lookups",
+    "summary": "Pure refactor: duplicated select projection extracted to a constant.",
+    "accept": [],
+    "brokenSymbolOrKey": null,
+    "edited": [
+      "recall-backend/index.ts"
+    ],
+    "why": "Clean control: identical columns, identical queries."
+  },
+  {
+    "id": "s07",
+    "repo": "SunnyBagal/recall-seeded",
+    "branch": "fix/ai-summary-parse-failure",
+    "class": "X-typed",
+    "title": "Return null from generateSummaryAndTags when the reply can't be parsed",
+    "summary": "Return type of generateSummaryAndTags widened to AISummaryResult | null; worker.ts and the repair script dereference the result without a null check.",
+    "accept": [
+      {
+        "path": "recall-backend/worker.ts",
+        "lines": [
+          85,
+          89
+        ]
+      },
+      {
+        "path": "recall-backend/worker.ts",
+        "lines": [
+          98,
+          99
+        ]
+      },
+      {
+        "path": "recall-backend/worker.ts",
+        "lines": [
+          107,
+          107
+        ]
+      },
+      {
+        "path": "recall-backend/scripts/repair-blocked-metadata.ts",
+        "lines": [
+          135,
+          139
+        ]
+      }
+    ],
+    "brokenSymbolOrKey": "generateSummaryAndTags",
+    "edited": [
+      "recall-backend/services/aiProcessor.ts"
+    ],
+    "why": "Backend typecheck gains TS18047 errors in worker.ts and repair-blocked-metadata.ts. At runtime any unparseable model reply makes aiResult.summary throw, so the job fails and retries (re-calling the model) and the item ends up 'failed' instead of saved."
+  },
+  {
+    "id": "s08",
+    "repo": "SunnyBagal/linea-seeded",
+    "branch": "refactor/move-socket-hook",
+    "class": "C",
+    "title": "web: move useSocket next to the other client libs",
+    "summary": "File move with every import (including the moved file's own relative import) updated.",
+    "accept": [],
+    "brokenSymbolOrKey": null,
+    "edited": [
+      "apps/web/app/components/ChatRoomClient.tsx",
+      "apps/web/app/components/canvas/CanvasBoard.tsx",
+      "apps/web/hooks/useSocket.ts",
+      "apps/web/lib/ws/useSocket.ts"
+    ],
+    "why": "Clean control: no importer left pointing at hooks/useSocket."
+  },
+  {
+    "id": "s09",
+    "repo": "SunnyBagal/recall-seeded",
+    "branch": "feat/search-result-limit",
+    "class": "D",
+    "title": "Search: accept an optional limit parameter",
+    "summary": "Range check uses && instead of || (limit < 1 && limit > 10), which can never be true.",
+    "accept": [
+      {
+        "path": "recall-backend/index.ts",
+        "lines": [
+          320,
+          320
+        ]
+      }
+    ],
+    "brokenSymbolOrKey": "limit",
+    "edited": [
+      "recall-backend/index.ts"
+    ],
+    "why": "Wrong comparison: out-of-range values pass validation. limit=0 returns no results, negative limits silently drop results from the end via slice(0, -n), and nothing ever gets the documented 400."
+  },
+  {
+    "id": "s10",
+    "repo": "SunnyBagal/recall-seeded",
+    "branch": "feat/dedupe-saved-links",
+    "class": "D",
+    "title": "Return the existing card when a saved link is added again",
+    "summary": "Check-then-act: SELECT for an existing (user, link) row, then a slow metadata fetch, then INSERT, with no unique constraint or transaction.",
+    "accept": [
+      {
+        "path": "recall-backend/index.ts",
+        "lines": [
+          127,
+          135
+        ]
+      },
+      {
+        "path": "recall-backend/index.ts",
+        "lines": [
+          138,
+          143
+        ]
+      }
+    ],
+    "brokenSymbolOrKey": "existing",
+    "edited": [
+      "recall-backend/index.ts"
+    ],
+    "why": "Race: two concurrent saves of the same link (double submit, two tabs, input bar plus modal) both pass the check during the multi-second fetchMetadata window and both insert, so the duplicates the change is meant to prevent still occur and are each processed."
+  },
+  {
+    "id": "s11",
+    "repo": "SunnyBagal/linea-seeded",
+    "branch": "fix/ops-load-auth-expiry",
+    "class": "X-typed",
+    "title": "Distinguish failed op-log loads from empty boards",
+    "summary": "fetchOperations return type widened to CanvasOp[] | null; CanvasBoard's loadOps spreads and folds the result without a null check.",
+    "accept": [
+      {
+        "path": "apps/web/app/components/canvas/CanvasBoard.tsx",
+        "lines": [
+          270,
+          272
+        ]
+      }
+    ],
+    "brokenSymbolOrKey": "fetchOperations",
+    "edited": [
+      "apps/web/lib/canvas/canvas.ts"
+    ],
+    "why": "CanvasBoard.tsx fails to typecheck (TS2488 at 271, TS2345 at 272). At runtime a failed load makes `[...ops]` throw inside the un-awaited loadOps(), so `hydrating` never becomes false and the board never renders; live ops pile up in opBuffer."
+  },
+  {
+    "id": "s12",
+    "repo": "SunnyBagal/linea-seeded",
+    "branch": "feat/rest-room-operations-route",
+    "class": "X-keyed",
+    "title": "http: serve the op log at /rooms/:roomId/operations",
+    "summary": "http-backend route moved from /operations/:roomId to /rooms/:roomId/operations; the web client's fetchOperations (and the replay script) still request /operations/:roomId.",
+    "accept": [
+      {
+        "path": "apps/web/lib/canvas/canvas.ts",
+        "lines": [
+          534,
+          534
+        ]
+      },
+      {
+        "path": "bench/bench-replay.ts",
+        "lines": [
+          148,
+          148
+        ]
+      }
+    ],
+    "brokenSymbolOrKey": "/operations/",
+    "edited": [
+      "apps/http-backend/src/index.ts"
+    ],
+    "why": "The client's GET now hits a non-existent route (404), fetchOperations logs and returns [], so every board opens empty: persisted history is never hydrated even though ops are still stored."
+  },
+  {
+    "id": "s13",
+    "repo": "SunnyBagal/recall-seeded",
+    "branch": "refactor/search-query-first",
+    "class": "X-semantic",
+    "title": "Document hybridSearch parameters and lead with the query",
+    "summary": "First two parameters of hybridSearch (both string) swapped to (query, userId); the route handler and both search scripts still pass (userId, query).",
+    "accept": [
+      {
+        "path": "recall-backend/index.ts",
+        "lines": [
+          323,
+          323
+        ]
+      },
+      {
+        "path": "recall-backend/bench/bench-search.ts",
+        "lines": [
+          309,
+          309
+        ]
+      },
+      {
+        "path": "recall-backend/bench/rigor/run.ts",
+        "lines": [
+          223,
+          223
+        ]
+      }
+    ],
+    "brokenSymbolOrKey": "hybridSearch",
+    "edited": [
+      "recall-backend/services/searchService.ts"
+    ],
+    "why": "No type error (both strings). At runtime the user's query text is used as the user id in `user_id = $1` (Postgres rejects it as an invalid uuid, so /api/v1/search returns 500) and the uuid is used as the FTS query."
+  },
+  {
+    "id": "s14",
+    "repo": "SunnyBagal/recall-seeded",
+    "branch": "feat/metadata-timeout-option",
+    "class": "C",
+    "title": "Let callers set the metadata fetch timeout",
+    "summary": "Optional parameter with a behaviour-preserving default; one caller opts in.",
+    "accept": [],
+    "brokenSymbolOrKey": null,
+    "edited": [
+      "recall-backend/scripts/repair-blocked-metadata.ts",
+      "recall-backend/services/metadataFetcher.ts"
+    ],
+    "why": "Clean control: default equals the previous constant."
+  },
+  {
+    "id": "s15",
+    "repo": "SunnyBagal/recall-seeded",
+    "branch": "refactor/chat-sources-event",
+    "class": "C",
+    "title": "Chat stream: rename the citations event to sources",
+    "summary": "SSE event type and payload key renamed on both the server and its only client.",
+    "accept": [],
+    "brokenSymbolOrKey": null,
+    "edited": [
+      "recall-backend/index.ts",
+      "recall-frontend/src/components/AskAIPanel.tsx"
+    ],
+    "why": "Clean control: producer (index.ts) and consumer (AskAIPanel.tsx) change together."
+  },
+  {
+    "id": "s16",
+    "repo": "SunnyBagal/linea-seeded",
+    "branch": "refactor/chat-broadcast-event",
+    "class": "C",
+    "title": "ws: send chat broadcasts as chat_message with a timestamp",
+    "summary": "Message type renamed on both the sending and the receiving side.",
+    "accept": [],
+    "brokenSymbolOrKey": null,
+    "edited": [
+      "apps/web/app/components/ChatRoomClient.tsx",
+      "apps/ws-backend/src/index.ts"
+    ],
+    "why": "Clean control: the only consumer of chat broadcasts (ChatRoomClient) is updated in the same commit."
+  },
+  {
+    "id": "s17",
+    "repo": "SunnyBagal/recall-seeded",
+    "branch": "fix/embedding-errors-surface",
+    "class": "X-semantic",
+    "title": "Report embedding API failures instead of returning null",
+    "summary": "generateEmbedding now throws on API/network failure where it used to return null; callers rely on null to degrade gracefully and don't catch.",
+    "accept": [
+      {
+        "path": "recall-backend/worker.ts",
+        "lines": [
+          91,
+          91
+        ]
+      },
+      {
+        "path": "recall-backend/index.ts",
+        "lines": [
+          322,
+          322
+        ]
+      },
+      {
+        "path": "recall-backend/index.ts",
+        "lines": [
+          359,
+          359
+        ]
+      }
+    ],
+    "brokenSymbolOrKey": "generateEmbedding",
+    "edited": [
+      "recall-backend/services/embeddings.ts"
+    ],
+    "why": "During any OpenAI outage or quota exhaustion: the worker throws after generating the summary, so jobs retry (re-calling the summariser) and end 'failed' instead of saving without an embedding; /api/v1/search returns 500 instead of keyword-only results; /api/v1/chat fails instead of falling back to recent items."
+  },
+  {
+    "id": "s18",
+    "repo": "SunnyBagal/recall-seeded",
+    "branch": "chore/namespace-auth-storage",
+    "class": "X-keyed",
+    "title": "Namespace the auth token in localStorage",
+    "summary": "authStore writes/reads the token under 'recall:token'; lib/api.ts and AskAIPanel still read/remove localStorage 'token'.",
+    "accept": [
+      {
+        "path": "recall-frontend/src/lib/api.ts",
+        "lines": [
+          9,
+          9
+        ]
+      },
+      {
+        "path": "recall-frontend/src/lib/api.ts",
+        "lines": [
+          20,
+          20
+        ]
+      },
+      {
+        "path": "recall-frontend/src/components/AskAIPanel.tsx",
+        "lines": [
+          92,
+          92
+        ]
+      }
+    ],
+    "brokenSymbolOrKey": "token",
+    "edited": [
+      "recall-frontend/src/stores/authStore.ts"
+    ],
+    "why": "After sign-in the axios interceptor finds no 'token', sends requests without Authorization, gets 401 and redirects to /signin, so users can never get past login (existing sessions keep working only until they log out). Ask AI also sends an empty Authorization header."
+  },
+  {
+    "id": "s19",
+    "repo": "SunnyBagal/linea-seeded",
+    "branch": "chore/namespace-auth-env",
+    "class": "X-keyed",
+    "title": "backend-common: read JWT secret from AUTH_JWT_SECRET",
+    "summary": "packages/backend-common/src/config.ts now reads process.env.AUTH_JWT_SECRET; every .env.example and both load scripts still set/read JWT_SECRET.",
+    "accept": [
+      {
+        "path": "packages/backend-common/.env.example",
+        "lines": [
+          3,
+          3
+        ]
+      },
+      {
+        "path": ".env.example",
+        "lines": [
+          11,
+          11
+        ]
+      },
+      {
+        "path": "apps/http-backend/.env.example",
+        "lines": [
+          7,
+          7
+        ]
+      },
+      {
+        "path": "apps/ws-backend/.env.example",
+        "lines": [
+          7,
+          7
+        ]
+      },
+      {
+        "path": "bench/bench-replay.ts",
+        "lines": [
+          210,
+          210
+        ]
+      },
+      {
+        "path": "bench/bench-ws.ts",
+        "lines": [
+          92,
+          92
+        ]
+      }
+    ],
+    "brokenSymbolOrKey": "JWT_SECRET",
+    "edited": [
+      "packages/backend-common/src/config.ts"
+    ],
+    "why": "Both backends import the config at startup and now throw 'AUTH_JWT_SECRET is not set' in any environment configured from the templates or the existing Railway variables (JWT_SECRET), so neither service boots."
+  },
+  {
+    "id": "s20",
+    "repo": "SunnyBagal/linea-seeded",
+    "branch": "refactor/rename-state-at-seq",
+    "class": "C",
+    "title": "canvas: rename stateAtSeq to shapesAtSeq",
+    "summary": "Rename of an exported function with every reference updated.",
+    "accept": [],
+    "brokenSymbolOrKey": null,
+    "edited": [
+      "apps/web/app/components/canvas/CanvasBoard.tsx",
+      "apps/web/lib/canvas/canvas.ts",
+      "bench/README-replay.md"
+    ],
+    "why": "Clean control: all references (canvas.ts, CanvasBoard.tsx, bench/README-replay.md) renamed; no behaviour change."
+  },
+  {
+    "id": "s21",
+    "repo": "SunnyBagal/linea-seeded",
+    "branch": "feat/server-message-schemas",
+    "class": "X-typed",
+    "title": "Add server-to-client message schemas to common types",
+    "summary": "Exported WsMessageSchema renamed to ClientMessageSchema in packages/common; apps/ws-backend still imports and calls WsMessageSchema.",
+    "accept": [
+      {
+        "path": "apps/ws-backend/src/index.ts",
+        "lines": [
+          5,
+          5
+        ]
+      },
+      {
+        "path": "apps/ws-backend/src/index.ts",
+        "lines": [
+          108,
+          108
+        ]
+      }
+    ],
+    "brokenSymbolOrKey": "WsMessageSchema",
+    "edited": [
+      "packages/common/src/types.ts"
+    ],
+    "why": "ws-backend no longer compiles (TS2724 at index.ts:5). At runtime the import is undefined, so WsMessageSchema.safeParse throws on every incoming frame (an unhandled rejection in the async message handler) and no join/chat/op message is processed."
+  },
+  {
+    "id": "s22",
+    "repo": "SunnyBagal/linea-seeded",
+    "branch": "refactor/pencil-segment-helpers",
+    "class": "D",
+    "title": "canvas: share polyline segment iteration",
+    "summary": "someSegment() iterates i < points.length and passes points[i + 1] as the second point, so the last call gets undefined.",
+    "accept": [
+      {
+        "path": "apps/web/lib/canvas/canvas.ts",
+        "lines": [
+          356,
+          357
+        ]
+      }
+    ],
+    "brokenSymbolOrKey": "someSegment",
+    "edited": [
+      "apps/web/lib/canvas/canvas.ts"
+    ],
+    "why": "Off-by-one: on the last iteration b is undefined and distToSegment reads b.x, throwing a TypeError. Any select-tool click that doesn't hit an earlier segment of a pencil stroke throws in the mousedown handler; polylineLength() always throws."
+  },
+  {
+    "id": "s23",
+    "repo": "SunnyBagal/linea-seeded",
+    "branch": "feat/delete-room-endpoint",
+    "class": "D",
+    "title": "http: add DELETE /room/:slug for room admins",
+    "summary": "prisma.room.delete(...) is not awaited inside the try block.",
+    "accept": [
+      {
+        "path": "apps/http-backend/src/index.ts",
+        "lines": [
+          291,
+          294
+        ]
+      }
+    ],
+    "brokenSymbolOrKey": "prisma.room.delete",
+    "edited": [
+      "apps/http-backend/src/index.ts"
+    ],
+    "why": "Missing await: the handler always answers 204 immediately; a P2025 (not found / not the admin) rejection escapes the try/catch as an unhandled promise rejection, so the 404 path is dead and, under Node's default unhandled-rejection mode, any user can crash http-backend by deleting a room they don't own."
+  },
+  {
+    "id": "s24",
+    "repo": "SunnyBagal/recall-seeded",
+    "branch": "refactor/card-variant-prop",
+    "class": "X-typed",
+    "title": "Card: replace readOnly flag with a variant prop",
+    "summary": "Exported CardProps field readOnly replaced by variant; pages/shared.tsx still passes readOnly.",
+    "accept": [
+      {
+        "path": "recall-frontend/src/pages/shared.tsx",
+        "lines": [
+          81,
+          81
+        ]
+      }
+    ],
+    "brokenSymbolOrKey": "readOnly",
+    "edited": [
+      "recall-frontend/src/components/Card.tsx"
+    ],
+    "why": "Frontend typecheck fails at shared.tsx:81 (TS2322). At runtime readOnly is ignored and variant defaults to \"owner\", so the public shared page shows delete buttons to anonymous visitors; clicking one sends an unauthenticated DELETE, gets 401, and bounces the visitor to /signin."
+  },
+  {
+    "id": "s25",
+    "repo": "SunnyBagal/recall-seeded",
+    "branch": "feat/abortable-text-extraction",
+    "class": "X-typed",
+    "title": "Make text extraction cancellable",
+    "summary": "Required parameter `signal: AbortSignal` added to exported extractText(); worker.ts and scripts/repair-blocked-metadata.ts still call it with four arguments.",
+    "accept": [
+      {
+        "path": "recall-backend/worker.ts",
+        "lines": [
+          44,
+          49
+        ]
+      },
+      {
+        "path": "recall-backend/scripts/repair-blocked-metadata.ts",
+        "lines": [
+          117,
+          122
+        ]
+      }
+    ],
+    "brokenSymbolOrKey": "extractText",
+    "edited": [
+      "recall-backend/services/textExtractor.ts"
+    ],
+    "why": "Backend typecheck gains TS2554 in worker.ts:44 and repair-blocked-metadata.ts:117. At runtime signal is undefined, so `signal.aborted` throws for every non-cached item: every content job fails and retries until it is marked failed."
+  },
+  {
+    "id": "s26",
+    "repo": "SunnyBagal/linea-seeded",
+    "branch": "refactor/zoom-limits-percent",
+    "class": "X-semantic",
+    "title": "canvas: express zoom limits in percent and add zoom presets",
+    "summary": "MIN_SCALE/MAX_SCALE change units from a scale factor (0.1..8) to percent (10..800); CanvasBoard still clamps the camera scale factor against them.",
+    "accept": [
+      {
+        "path": "apps/web/app/components/canvas/CanvasBoard.tsx",
+        "lines": [
+          100,
+          100
+        ]
+      },
+      {
+        "path": "apps/web/app/components/canvas/CanvasBoard.tsx",
+        "lines": [
+          132,
+          138
+        ]
+      },
+      {
+        "path": "apps/web/app/components/canvas/CanvasBoard.tsx",
+        "lines": [
+          563,
+          563
+        ]
+      }
+    ],
+    "brokenSymbolOrKey": "MIN_SCALE",
+    "edited": [
+      "apps/web/lib/canvas/canvas.ts"
+    ],
+    "why": "Every zoom path in CanvasBoard (zoom buttons, ctrl/cmd+wheel, Fit) clamps cam.scale to at least 10, i.e. 1000% zoom, so any zoom action jumps to an unusable zoom level and zooming out is impossible."
+  },
+  {
+    "id": "s27",
+    "repo": "SunnyBagal/linea-seeded",
+    "branch": "refactor/ws-ack-event-names",
+    "class": "X-keyed",
+    "title": "ws: namespace per-socket replies as op:ack / op:error",
+    "summary": "ws-backend renames the ack frame type from 'op_ack' to 'op:ack'; the web client (and the ws load script) still match on \"op_ack\".",
+    "accept": [
+      {
+        "path": "apps/web/app/components/canvas/CanvasBoard.tsx",
+        "lines": [
+          290,
+          290
+        ]
+      },
+      {
+        "path": "bench/bench-ws.ts",
+        "lines": [
+          124,
+          124
+        ]
+      }
+    ],
+    "brokenSymbolOrKey": "op_ack",
+    "edited": [
+      "apps/ws-backend/src/index.ts"
+    ],
+    "why": "CanvasBoard never matches an ack, so locally emitted ops keep seq undefined forever: they are excluded from currentMaxSeq() and treated as seq 0 by stateAtSeq, so time-travel shows your own edits at the very start of history. bench-ws counts zero acks."
+  },
+  {
+    "id": "s28",
+    "repo": "SunnyBagal/recall-seeded",
+    "branch": "feat/ai-answer-formatting",
+    "class": "D",
+    "title": "Ask AI: render bold, inline code and citations in answers",
+    "summary": "Model output, saved-page titles and saved links are interpolated into an HTML string without escaping and rendered with dangerouslySetInnerHTML.",
+    "accept": [
+      {
+        "path": "recall-frontend/src/components/AskAIPanel.tsx",
+        "lines": [
+          261,
+          268
+        ]
+      },
+      {
+        "path": "recall-frontend/src/components/AskAIPanel.tsx",
+        "lines": [
+          276,
+          276
+        ]
+      }
+    ],
+    "brokenSymbolOrKey": "dangerouslySetInnerHTML",
+    "edited": [
+      "recall-frontend/src/components/AskAIPanel.tsx"
+    ],
+    "why": "Unsafe HTML building (XSS): a saved page whose og:title or extracted text contains markup (or prompt-injects the model into emitting it) runs script in the user's session, e.g. <img onerror> in the answer or a quote-breaking title attribute, and can read the token from localStorage."
+  },
+  {
+    "id": "s29",
+    "repo": "SunnyBagal/linea-seeded",
+    "branch": "fix/clear-selection-on-remote-update",
+    "class": "D",
+    "title": "canvas: deselect when another user edits the selected shape",
+    "summary": "New selection check reads data.payload.id for every incoming op, but DELETE ops carry payload: null.",
+    "accept": [
+      {
+        "path": "apps/web/app/components/canvas/CanvasBoard.tsx",
+        "lines": [
+          313,
+          313
+        ]
+      }
+    ],
+    "brokenSymbolOrKey": "data.payload.id",
+    "edited": [
+      "apps/web/app/components/canvas/CanvasBoard.tsx"
+    ],
+    "why": "Unhandled null: for every remote DELETE, data.payload.id throws a TypeError that the surrounding try/catch swallows before the op is pushed or applied, so remote deletes are silently dropped on all other clients (and the old delete-deselect behaviour is gone)."
+  },
+  {
+    "id": "s30",
+    "repo": "SunnyBagal/recall-seeded",
+    "branch": "refactor/content-search-route",
+    "class": "X-keyed",
+    "title": "Move search under /api/v1/content/search",
+    "summary": "Server route renamed from /api/v1/search to /api/v1/content/search; the frontend's useSearch still calls /api/v1/search.",
+    "accept": [
+      {
+        "path": "recall-frontend/src/hooks/useSearch.ts",
+        "lines": [
+          8,
+          8
+        ]
+      }
+    ],
+    "brokenSymbolOrKey": "/api/v1/search",
+    "edited": [
+      "recall-backend/index.ts"
+    ],
+    "why": "Every search from the dashboard now gets a 404; useSearch surfaces an error/empty results, so search is dead in the UI while the server route works."
+  }
+]

@@ -1,0 +1,12 @@
+[
+  {"id": "f1", "repo": "SunnyBagal/demo", "branch": "feat/one", "class": "X-typed", "title": "one",
+   "accept": [{"path": "src/a.ts", "lines": [10, 10]}], "brokenSymbolOrKey": "fooBar"},
+  {"id": "f2", "repo": "SunnyBagal/demo", "branch": "fix/two", "class": "D", "title": "two",
+   "accept": [{"path": "src/b.ts", "lines": [20, 22]}], "brokenSymbolOrKey": "limit"},
+  {"id": "f3", "repo": "SunnyBagal/demo", "branch": "chore/three", "class": "X-keyed", "title": "three",
+   "accept": [{"path": "src/c.ts", "lines": [5, 5]}, {"path": "src/e.ts", "lines": [40, 41]}], "brokenSymbolOrKey": "op_ack"},
+  {"id": "f4", "repo": "SunnyBagal/demo", "branch": "refactor/four", "class": "C", "title": "four",
+   "accept": [], "brokenSymbolOrKey": null},
+  {"id": "f5", "repo": "SunnyBagal/demo", "branch": "feat/five", "class": "X-semantic", "title": "five",
+   "accept": [{"path": "src/f.ts", "lines": [1, 3]}], "brokenSymbolOrKey": "MIN_SCALE"}
+]
