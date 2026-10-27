@@ -10,6 +10,10 @@
 #   (c) Mechanical, needed because the copy lives in runs/: it cd's to the repo
 #       root ("$(dirname "$0")/..") instead of its own directory, so key.json,
 #       prs/ and opened-prs.tsv resolve as they do for open-prs.sh.
+#   (d) Added 28 Oct: optional ONLY_REPO=<owner/repo>. Seeds on any other repo
+#       are skipped where they fall in the order (no PR, no wait). Used to open
+#       the Recall seeds while TraceHound's Action could not install on Linea;
+#       the Linea seeds open later, after the Action fix, same order otherwise.
 # Unchanged: branches, titles, bodies, SHUFFLE_SEED and so the order, login
 # check, skip-if-PR-exists, opened-prs.tsv format.
 # ---------------------------------------------------------------------------
@@ -104,6 +108,11 @@ for ((k = 0; k < n; k++)); do
   if [ "$DRY_RUN" -eq 1 ]; then
     echo "gh pr create --repo $repo --head $branch --base main --title \"$title\" --body-file $pr (minus its title line)"
     if [ "$k" -lt $((n - 1)) ]; then echo "sleep $DELAY_SECONDS"; fi
+    continue
+  fi
+
+  if [ -n "${ONLY_REPO:-}" ] && [ "$repo" != "$ONLY_REPO" ]; then   # (d)
+    echo "[$id] $repo is not ONLY_REPO (skipped)"
     continue
   fi
 
