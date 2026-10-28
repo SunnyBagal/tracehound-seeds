@@ -1,0 +1,163 @@
+{
+  "number": 2,
+  "reviewComments": [
+    {
+      "url": "https://api.github.com/repos/SunnyBagal/recall-seeded/pulls/comments/4392916266",
+      "pull_request_review_id": 5672726976,
+      "id": 4392916266,
+      "node_id": "PRRC_kwDOVPP6e88AAAABBdaVKg",
+      "diff_hunk": "@@ -19,14 +19,19 @@ async function extractYouTubeTranscript(videoId: string): Promise<string | null>\n   }\n }\n \n-async function extractGitHubReadme(owner: string, repo: string): Promise<string | null> {\n+async function extractGitHubReadme(\n+  owner: string,\n+  repo: string,\n+  signal: AbortSignal\n+): Promise<string | null> {\n   const filenames = [\"README.md\", \"readme.md\", \"README.rst\", \"README\"];\n \n   for (const filename of filenames) {\n+    if (signal.aborted) return null;",
+      "path": "recall-backend/services/textExtractor.ts",
+      "commit_id": "70451a11afa0954b3905e64aaf817d31818589d8",
+      "original_commit_id": "70451a11afa0954b3905e64aaf817d31818589d8",
+      "user": {
+        "login": "devin-ai-integration[bot]",
+        "id": 158243242,
+        "node_id": "BOT_kgDOCW6Zqg",
+        "avatar_url": "https://avatars.githubusercontent.com/in/811515?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/devin-ai-integration%5Bbot%5D",
+        "html_url": "https://github.com/apps/devin-ai-integration",
+        "followers_url": "https://api.github.com/users/devin-ai-integration%5Bbot%5D/followers",
+        "following_url": "https://api.github.com/users/devin-ai-integration%5Bbot%5D/following{/other_user}",
+        "gists_url": "https://api.github.com/users/devin-ai-integration%5Bbot%5D/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/devin-ai-integration%5Bbot%5D/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/devin-ai-integration%5Bbot%5D/subscriptions",
+        "organizations_url": "https://api.github.com/users/devin-ai-integration%5Bbot%5D/orgs",
+        "repos_url": "https://api.github.com/users/devin-ai-integration%5Bbot%5D/repos",
+        "events_url": "https://api.github.com/users/devin-ai-integration%5Bbot%5D/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/devin-ai-integration%5Bbot%5D/received_events",
+        "type": "Bot",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "<!-- devin-review-comment {\"id\": \"BUG_pr-review-job-d6af4790986942dab6584f52b9a7a660_0001\", \"file_path\": \"recall-backend/services/textExtractor.ts\", \"start_line\": 30, \"end_line\": 30, \"side\": \"RIGHT\", \"based_on_repo_rules\": false, \"kind\": \"bug\"} -->\n\n🔴 **Cancelled README extraction clears saved text**\n\nWhen a GitHub fetch is aborted mid-request, `extractGitHubReadme` returns null instead of preserving text or cancelling the job. [processContent](https://github.com/sunnybagal/recall-seeded/blob/70451a11afa0954b3905e64aaf817d31818589d8/recall-backend/worker.ts#L94-L104 \"recall-backend/worker.ts:94-104\") then overwrites saved text and marks extraction done, without a retry.\n\n<details>\n<summary>Learn more</summary>\n\nThe worker stores the extractor's result as `extractedText` and marks the row done in both its short-text and normal completion paths ([processContent](https://github.com/sunnybagal/recall-seeded/blob/70451a11afa0954b3905e64aaf817d31818589d8/recall-backend/worker.ts#L61-L71 \"recall-backend/worker.ts:61-71\"), [processContent](https://github.com/sunnybagal/recall-seeded/blob/70451a11afa0954b3905e64aaf817d31818589d8/recall-backend/worker.ts#L94-L104 \"recall-backend/worker.ts:94-104\")). An abort during `fetch` is swallowed by the README loop's catch. On the next iteration, the new abort check returns null, even when the row already has short text. This commits a cancelled extraction as a successful empty extraction instead of allowing the job to retry.\n\n**Example:** A GitHub row has `extractedText = \"notes\"`. Its README request is aborted during shutdown. Extraction returns null, and the worker writes `extractedText = null` with status `done`, rather than retaining the notes and retrying later.\n\n**Recommended fix:** Propagate cancellation separately from ordinary README failures and let `processContent` leave the job unfinished or retryable. If aborted extraction must return a value instead, preserve `existingText` and prevent the worker from marking incomplete work done.\n\n</details>\n\n<!-- devin-review-badge-begin -->\n<a href=\"https://app.devin.ai/review/sunnybagal/recall-seeded/pull/2\" target=\"_blank\"><picture><source media=\"(prefers-color-scheme: dark)\" srcset=\"https://static.devin.ai/assets/gh-devin-review-dark.svg?v=4\"><img src=\"https://static.devin.ai/assets/gh-devin-review-light.svg?v=4\" alt=\"Devin Review\"></picture></a>\n<!-- devin-review-badge-end -->\n\n---\n*Was this helpful? React with 👍 or 👎 to provide feedback.*",
+      "created_at": "2026-10-27T19:00:34Z",
+      "updated_at": "2026-10-27T19:00:35Z",
+      "html_url": "https://github.com/SunnyBagal/recall-seeded/pull/2#discussion_r4392916266",
+      "pull_request_url": "https://api.github.com/repos/SunnyBagal/recall-seeded/pulls/2",
+      "_links": {
+        "self": {
+          "href": "https://api.github.com/repos/SunnyBagal/recall-seeded/pulls/comments/4392916266"
+        },
+        "html": {
+          "href": "https://github.com/SunnyBagal/recall-seeded/pull/2#discussion_r4392916266"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/SunnyBagal/recall-seeded/pulls/2"
+        }
+      },
+      "reactions": {
+        "url": "https://api.github.com/repos/SunnyBagal/recall-seeded/pulls/comments/4392916266/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "start_line": null,
+      "original_start_line": null,
+      "start_side": null,
+      "line": 30,
+      "original_line": 30,
+      "side": "RIGHT",
+      "author_association": "NONE",
+      "original_position": 13,
+      "position": 13,
+      "subject_type": "line",
+      "is_copilot_code_review": false,
+      "copilot_code_review_sources": []
+    }
+  ],
+  "reviews": [
+    {
+      "id": 5672726976,
+      "node_id": "PRR_kwDOVPP6e88AAAABUh7xwA",
+      "user": {
+        "login": "devin-ai-integration[bot]",
+        "id": 158243242,
+        "node_id": "BOT_kgDOCW6Zqg",
+        "avatar_url": "https://avatars.githubusercontent.com/in/811515?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/devin-ai-integration%5Bbot%5D",
+        "html_url": "https://github.com/apps/devin-ai-integration",
+        "followers_url": "https://api.github.com/users/devin-ai-integration%5Bbot%5D/followers",
+        "following_url": "https://api.github.com/users/devin-ai-integration%5Bbot%5D/following{/other_user}",
+        "gists_url": "https://api.github.com/users/devin-ai-integration%5Bbot%5D/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/devin-ai-integration%5Bbot%5D/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/devin-ai-integration%5Bbot%5D/subscriptions",
+        "organizations_url": "https://api.github.com/users/devin-ai-integration%5Bbot%5D/orgs",
+        "repos_url": "https://api.github.com/users/devin-ai-integration%5Bbot%5D/repos",
+        "events_url": "https://api.github.com/users/devin-ai-integration%5Bbot%5D/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/devin-ai-integration%5Bbot%5D/received_events",
+        "type": "Bot",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "**Devin Review** found 1 potential issue.\n\n1 flag not posted on this PR by your GitHub settings — view it in Devin Review. ([Configure](https://app.devin.ai/org/sunnybagal/settings/review))\n\n<!-- devin-review-badge-begin -->\n<a href=\"https://app.devin.ai/review/sunnybagal/recall-seeded/pull/2\" target=\"_blank\"><picture><source media=\"(prefers-color-scheme: dark)\" srcset=\"https://static.devin.ai/assets/gh-devin-review-dark.svg?v=4\"><img src=\"https://static.devin.ai/assets/gh-devin-review-light.svg?v=4\" alt=\"Devin Review\"></picture></a>\n<!-- devin-review-badge-end -->",
+      "state": "COMMENTED",
+      "html_url": "https://github.com/SunnyBagal/recall-seeded/pull/2#pullrequestreview-5672726976",
+      "pull_request_url": "https://api.github.com/repos/SunnyBagal/recall-seeded/pulls/2",
+      "author_association": "NONE",
+      "_links": {
+        "html": {
+          "href": "https://github.com/SunnyBagal/recall-seeded/pull/2#pullrequestreview-5672726976"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/SunnyBagal/recall-seeded/pulls/2"
+        }
+      },
+      "is_copilot_code_review": false,
+      "copilot_code_review_effort": null,
+      "submitted_at": "2026-10-27T19:00:35Z",
+      "commit_id": "70451a11afa0954b3905e64aaf817d31818589d8"
+    },
+    {
+      "id": 5672749349,
+      "node_id": "PRR_kwDOVPP6e88AAAABUh9JJQ",
+      "user": {
+        "login": "github-actions[bot]",
+        "id": 41898282,
+        "node_id": "MDM6Qm90NDE4OTgyODI=",
+        "avatar_url": "https://avatars.githubusercontent.com/in/15368?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/github-actions%5Bbot%5D",
+        "html_url": "https://github.com/apps/github-actions",
+        "followers_url": "https://api.github.com/users/github-actions%5Bbot%5D/followers",
+        "following_url": "https://api.github.com/users/github-actions%5Bbot%5D/following{/other_user}",
+        "gists_url": "https://api.github.com/users/github-actions%5Bbot%5D/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/github-actions%5Bbot%5D/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/github-actions%5Bbot%5D/subscriptions",
+        "organizations_url": "https://api.github.com/users/github-actions%5Bbot%5D/orgs",
+        "repos_url": "https://api.github.com/users/github-actions%5Bbot%5D/repos",
+        "events_url": "https://api.github.com/users/github-actions%5Bbot%5D/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/github-actions%5Bbot%5D/received_events",
+        "type": "Bot",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "TraceHound · pool-verify-v1 · nvidia/Nemotron-3.5-Super-VL · 0 findings (pool 1, kept 0)\n\nThese comments are model-generated and unverified.\n\n## Files you didn't edit that depend on this change\n- [recall-backend/scripts/repair-blocked-metadata.ts:117](https://github.com/SunnyBagal/recall-seeded/blob/70451a11afa0954b3905e64aaf817d31818589d8/recall-backend/scripts/repair-blocked-metadata.ts#L117): What breaks: TS2554 Expected 5 arguments, but got 4.\n- [recall-backend/worker.ts:44](https://github.com/SunnyBagal/recall-seeded/blob/70451a11afa0954b3905e64aaf817d31818589d8/recall-backend/worker.ts#L44): What breaks: TS2554 Expected 5 arguments, but got 4.\n\n<!-- tracehound:v1 {\"version\":1,\"pipeline\":\"pool-verify-v1\",\"headSha\":\"70451a11afa0954b3905e64aaf817d31818589d8\",\"pool\":1,\"kept\":0,\"posted\":0,\"fixes\":{\"attempted\":0,\"valid\":0,\"rejected\":0},\"contracts\":{\"status\":\"ok\",\"inline\":0,\"body\":2,\"ms\":3244,\"typed\":\"complete\"},\"findings\":[]} -->",
+      "state": "COMMENTED",
+      "html_url": "https://github.com/SunnyBagal/recall-seeded/pull/2#pullrequestreview-5672749349",
+      "pull_request_url": "https://api.github.com/repos/SunnyBagal/recall-seeded/pulls/2",
+      "author_association": "NONE",
+      "_links": {
+        "html": {
+          "href": "https://github.com/SunnyBagal/recall-seeded/pull/2#pullrequestreview-5672749349"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/SunnyBagal/recall-seeded/pulls/2"
+        }
+      },
+      "is_copilot_code_review": false,
+      "copilot_code_review_effort": null,
+      "submitted_at": "2026-10-27T19:02:29Z",
+      "commit_id": "70451a11afa0954b3905e64aaf817d31818589d8"
+    }
+  ],
+  "issueComments": []
+}

@@ -1,0 +1,121 @@
+{
+  "number": 8,
+  "reviewComments": [
+    {
+      "url": "https://api.github.com/repos/SunnyBagal/linea-seeded/pulls/comments/4400501917",
+      "pull_request_review_id": 5682522863,
+      "id": 4400501917,
+      "node_id": "PRRC_kwDOVPP6E88AAAABBkpUnQ",
+      "diff_hunk": "@@ -276,6 +276,31 @@ app.get(\"/room/:slug\", authMiddleware, async (req, res) => {\n   });\n });\n \n+app.delete(\"/room/:slug\", authMiddleware, async (req, res) => {\n+  const adminId = req.userId;\n+  if (!adminId) return res.status(401).json({ message: \"Unauthorized\" });\n+\n+  const slug = req.params.slug;\n+  if (typeof slug !== \"string\") {\n+    return res.status(400).json({ message: \"Invalid slug\" });\n+  }\n+\n+  try {\n+    // Only the room's admin may delete it; operations, snapshots and chats\n+    // cascade with the room.\n+    prisma.room.delete({\n+      where: { slug, adminId },\n+    });",
+      "path": "apps/http-backend/src/index.ts",
+      "commit_id": "4c868867064c6a6c82e269f444fa4f8b96b6df26",
+      "original_commit_id": "4c868867064c6a6c82e269f444fa4f8b96b6df26",
+      "user": {
+        "login": "github-actions[bot]",
+        "id": 41898282,
+        "node_id": "MDM6Qm90NDE4OTgyODI=",
+        "avatar_url": "https://avatars.githubusercontent.com/in/15368?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/github-actions%5Bbot%5D",
+        "html_url": "https://github.com/apps/github-actions",
+        "followers_url": "https://api.github.com/users/github-actions%5Bbot%5D/followers",
+        "following_url": "https://api.github.com/users/github-actions%5Bbot%5D/following{/other_user}",
+        "gists_url": "https://api.github.com/users/github-actions%5Bbot%5D/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/github-actions%5Bbot%5D/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/github-actions%5Bbot%5D/subscriptions",
+        "organizations_url": "https://api.github.com/users/github-actions%5Bbot%5D/orgs",
+        "repos_url": "https://api.github.com/users/github-actions%5Bbot%5D/repos",
+        "events_url": "https://api.github.com/users/github-actions%5Bbot%5D/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/github-actions%5Bbot%5D/received_events",
+        "type": "Bot",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "prisma.room.delete({ where: { slug, adminId } }) passes adminId in the where of a singular delete. Prisma requires the where argument of delete/findUnique/update to match a unique criterion, and adminId is not unique (slug is). This throws a PrismaClientValidationError at runtime, which is not PrismaClientKnownRequestError/P2025, so the catch block does not handle it: legitimate deletes by the admin fail with 500 instead of 204, and the intended 404 for rooms owned by others is never returned.\n\nSuggested fix (model-generated, not tested):\n```suggestion\n    prisma.room.deleteMany({\n      where: { slug, adminId },\n    });\n```",
+      "created_at": "2026-10-28T12:25:12Z",
+      "updated_at": "2026-10-28T12:25:12Z",
+      "html_url": "https://github.com/SunnyBagal/linea-seeded/pull/8#discussion_r4400501917",
+      "pull_request_url": "https://api.github.com/repos/SunnyBagal/linea-seeded/pulls/8",
+      "_links": {
+        "self": {
+          "href": "https://api.github.com/repos/SunnyBagal/linea-seeded/pulls/comments/4400501917"
+        },
+        "html": {
+          "href": "https://github.com/SunnyBagal/linea-seeded/pull/8#discussion_r4400501917"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/SunnyBagal/linea-seeded/pulls/8"
+        }
+      },
+      "reactions": {
+        "url": "https://api.github.com/repos/SunnyBagal/linea-seeded/pulls/comments/4400501917/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "start_line": 291,
+      "original_start_line": 291,
+      "start_side": "RIGHT",
+      "line": 293,
+      "original_line": 293,
+      "side": "RIGHT",
+      "author_association": "NONE",
+      "original_position": 18,
+      "position": 18,
+      "subject_type": "line",
+      "is_copilot_code_review": false,
+      "copilot_code_review_sources": []
+    }
+  ],
+  "reviews": [
+    {
+      "id": 5682522863,
+      "node_id": "PRR_kwDOVPP6E88AAAABUrRq7w",
+      "user": {
+        "login": "github-actions[bot]",
+        "id": 41898282,
+        "node_id": "MDM6Qm90NDE4OTgyODI=",
+        "avatar_url": "https://avatars.githubusercontent.com/in/15368?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/github-actions%5Bbot%5D",
+        "html_url": "https://github.com/apps/github-actions",
+        "followers_url": "https://api.github.com/users/github-actions%5Bbot%5D/followers",
+        "following_url": "https://api.github.com/users/github-actions%5Bbot%5D/following{/other_user}",
+        "gists_url": "https://api.github.com/users/github-actions%5Bbot%5D/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/github-actions%5Bbot%5D/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/github-actions%5Bbot%5D/subscriptions",
+        "organizations_url": "https://api.github.com/users/github-actions%5Bbot%5D/orgs",
+        "repos_url": "https://api.github.com/users/github-actions%5Bbot%5D/repos",
+        "events_url": "https://api.github.com/users/github-actions%5Bbot%5D/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/github-actions%5Bbot%5D/received_events",
+        "type": "Bot",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "TraceHound · pool-verify-v1 · nvidia/Nemotron-3.5-Super-VL · 1 findings (pool 1, kept 1)\n\nThese comments are model-generated and unverified.\n\n<!-- tracehound:v1 {\"version\":1,\"pipeline\":\"pool-verify-v1\",\"headSha\":\"4c868867064c6a6c82e269f444fa4f8b96b6df26\",\"pool\":1,\"kept\":1,\"posted\":1,\"fixes\":{\"attempted\":1,\"valid\":1,\"rejected\":0},\"contracts\":{\"status\":\"ok\",\"inline\":0,\"body\":0,\"ms\":3728,\"typed\":\"complete\"},\"findings\":[{\"path\":\"apps/http-backend/src/index.ts\",\"line\":291,\"startLine\":291,\"source\":\"both\",\"hasSuggestion\":true}]} -->",
+      "state": "COMMENTED",
+      "html_url": "https://github.com/SunnyBagal/linea-seeded/pull/8#pullrequestreview-5682522863",
+      "pull_request_url": "https://api.github.com/repos/SunnyBagal/linea-seeded/pulls/8",
+      "author_association": "NONE",
+      "_links": {
+        "html": {
+          "href": "https://github.com/SunnyBagal/linea-seeded/pull/8#pullrequestreview-5682522863"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/SunnyBagal/linea-seeded/pulls/8"
+        }
+      },
+      "is_copilot_code_review": false,
+      "copilot_code_review_effort": null,
+      "submitted_at": "2026-10-28T12:25:12Z",
+      "commit_id": "4c868867064c6a6c82e269f444fa4f8b96b6df26"
+    }
+  ],
+  "issueComments": []
+}

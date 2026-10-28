@@ -1,0 +1,121 @@
+{
+  "number": 13,
+  "reviewComments": [
+    {
+      "url": "https://api.github.com/repos/SunnyBagal/linea-seeded/pulls/comments/4400578606",
+      "pull_request_review_id": 5682624658,
+      "id": 4400578606,
+      "node_id": "PRRC_kwDOVPP6E88AAAABBkuALg",
+      "diff_hunk": "@@ -27,10 +34,10 @@ export function useSocket() {\n \n       ws.onclose = () => {\n         setSocket(undefined);\n-        if (closedByUsRef.current) return;\n+        if (closedByUsRef.current || !reconnect) return;",
+      "path": "apps/web/hooks/useSocket.ts",
+      "commit_id": "06b43cbfa84cfe1d22258d7e478b7ed6692c56f0",
+      "original_commit_id": "06b43cbfa84cfe1d22258d7e478b7ed6692c56f0",
+      "user": {
+        "login": "github-actions[bot]",
+        "id": 41898282,
+        "node_id": "MDM6Qm90NDE4OTgyODI=",
+        "avatar_url": "https://avatars.githubusercontent.com/in/15368?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/github-actions%5Bbot%5D",
+        "html_url": "https://github.com/apps/github-actions",
+        "followers_url": "https://api.github.com/users/github-actions%5Bbot%5D/followers",
+        "following_url": "https://api.github.com/users/github-actions%5Bbot%5D/following{/other_user}",
+        "gists_url": "https://api.github.com/users/github-actions%5Bbot%5D/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/github-actions%5Bbot%5D/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/github-actions%5Bbot%5D/subscriptions",
+        "organizations_url": "https://api.github.com/users/github-actions%5Bbot%5D/orgs",
+        "repos_url": "https://api.github.com/users/github-actions%5Bbot%5D/repos",
+        "events_url": "https://api.github.com/users/github-actions%5Bbot%5D/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/github-actions%5Bbot%5D/received_events",
+        "type": "Bot",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "When `reconnect` is `false` and the socket closes (not closed by us), the handler returns before calling `setLoading(true)`, leaving `loading` in a stale state. On an initial connection failure, `loading` stays `true` forever while `socket` is `undefined`, stranding the view in a permanent loading state with no recovery path.\n\nSuggested fix (model-generated, not tested):\n```suggestion\n        if (closedByUsRef.current || !reconnect) { setLoading(true); return; }\n```",
+      "created_at": "2026-10-28T12:33:31Z",
+      "updated_at": "2026-10-28T12:33:32Z",
+      "html_url": "https://github.com/SunnyBagal/linea-seeded/pull/13#discussion_r4400578606",
+      "pull_request_url": "https://api.github.com/repos/SunnyBagal/linea-seeded/pulls/13",
+      "_links": {
+        "self": {
+          "href": "https://api.github.com/repos/SunnyBagal/linea-seeded/pulls/comments/4400578606"
+        },
+        "html": {
+          "href": "https://github.com/SunnyBagal/linea-seeded/pull/13#discussion_r4400578606"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/SunnyBagal/linea-seeded/pulls/13"
+        }
+      },
+      "reactions": {
+        "url": "https://api.github.com/repos/SunnyBagal/linea-seeded/pulls/comments/4400578606/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "start_line": null,
+      "original_start_line": null,
+      "start_side": null,
+      "line": 37,
+      "original_line": 37,
+      "side": "RIGHT",
+      "author_association": "NONE",
+      "original_position": 21,
+      "position": 21,
+      "subject_type": "line",
+      "is_copilot_code_review": false,
+      "copilot_code_review_sources": []
+    }
+  ],
+  "reviews": [
+    {
+      "id": 5682624658,
+      "node_id": "PRR_kwDOVPP6E88AAAABUrX4kg",
+      "user": {
+        "login": "github-actions[bot]",
+        "id": 41898282,
+        "node_id": "MDM6Qm90NDE4OTgyODI=",
+        "avatar_url": "https://avatars.githubusercontent.com/in/15368?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/github-actions%5Bbot%5D",
+        "html_url": "https://github.com/apps/github-actions",
+        "followers_url": "https://api.github.com/users/github-actions%5Bbot%5D/followers",
+        "following_url": "https://api.github.com/users/github-actions%5Bbot%5D/following{/other_user}",
+        "gists_url": "https://api.github.com/users/github-actions%5Bbot%5D/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/github-actions%5Bbot%5D/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/github-actions%5Bbot%5D/subscriptions",
+        "organizations_url": "https://api.github.com/users/github-actions%5Bbot%5D/orgs",
+        "repos_url": "https://api.github.com/users/github-actions%5Bbot%5D/repos",
+        "events_url": "https://api.github.com/users/github-actions%5Bbot%5D/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/github-actions%5Bbot%5D/received_events",
+        "type": "Bot",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "TraceHound · pool-verify-v1 · nvidia/Nemotron-3.5-Super-VL · 1 findings (pool 3, kept 1)\n\nThese comments are model-generated and unverified.\n\n<!-- tracehound:v1 {\"version\":1,\"pipeline\":\"pool-verify-v1\",\"headSha\":\"06b43cbfa84cfe1d22258d7e478b7ed6692c56f0\",\"pool\":3,\"kept\":1,\"posted\":1,\"fixes\":{\"attempted\":1,\"valid\":1,\"rejected\":0},\"contracts\":{\"status\":\"ok\",\"inline\":0,\"body\":0,\"ms\":5482,\"typed\":\"complete\"},\"findings\":[{\"path\":\"apps/web/hooks/useSocket.ts\",\"line\":37,\"startLine\":37,\"source\":\"ctx\",\"hasSuggestion\":true}]} -->",
+      "state": "COMMENTED",
+      "html_url": "https://github.com/SunnyBagal/linea-seeded/pull/13#pullrequestreview-5682624658",
+      "pull_request_url": "https://api.github.com/repos/SunnyBagal/linea-seeded/pulls/13",
+      "author_association": "NONE",
+      "_links": {
+        "html": {
+          "href": "https://github.com/SunnyBagal/linea-seeded/pull/13#pullrequestreview-5682624658"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/SunnyBagal/linea-seeded/pulls/13"
+        }
+      },
+      "is_copilot_code_review": false,
+      "copilot_code_review_effort": null,
+      "submitted_at": "2026-10-28T12:33:31Z",
+      "commit_id": "06b43cbfa84cfe1d22258d7e478b7ed6692c56f0"
+    }
+  ],
+  "issueComments": []
+}

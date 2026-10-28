@@ -1,0 +1,121 @@
+{
+  "number": 12,
+  "reviewComments": [
+    {
+      "url": "https://api.github.com/repos/SunnyBagal/recall-seeded/pulls/comments/4393941950",
+      "pull_request_review_id": 5674064001,
+      "id": 4393941950,
+      "node_id": "PRRC_kwDOVPP6e88AAAABBeY7vg",
+      "diff_hunk": "@@ -21,17 +37,15 @@ export async function generateEmbedding(text: string): Promise<number[] | null>\n         input: truncated,\n       }),\n     });\n-\n-    if (!response.ok) {\n-      const errText = await response.text();\n-      console.error(`[Embedding] OpenAI API error: ${response.status} ${errText}`);\n-      return null;\n-    }\n-\n-    const data = await response.json();\n-    return data.data[0].embedding as number[];\n   } catch (err) {\n-    console.error(\"[Embedding] Failed:\", (err as Error).message);\n-    return null;\n+    throw new EmbeddingError(`request failed: ${(err as Error).message}`);\n   }\n+\n+  if (!response.ok) {",
+      "path": "recall-backend/services/embeddings.ts",
+      "commit_id": "960dae210386cd39bfbfbb59eb232c2abe60423c",
+      "original_commit_id": "960dae210386cd39bfbfbb59eb232c2abe60423c",
+      "user": {
+        "login": "github-actions[bot]",
+        "id": 41898282,
+        "node_id": "MDM6Qm90NDE4OTgyODI=",
+        "avatar_url": "https://avatars.githubusercontent.com/in/15368?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/github-actions%5Bbot%5D",
+        "html_url": "https://github.com/apps/github-actions",
+        "followers_url": "https://api.github.com/users/github-actions%5Bbot%5D/followers",
+        "following_url": "https://api.github.com/users/github-actions%5Bbot%5D/following{/other_user}",
+        "gists_url": "https://api.github.com/users/github-actions%5Bbot%5D/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/github-actions%5Bbot%5D/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/github-actions%5Bbot%5D/subscriptions",
+        "organizations_url": "https://api.github.com/users/github-actions%5Bbot%5D/orgs",
+        "repos_url": "https://api.github.com/users/github-actions%5Bbot%5D/repos",
+        "events_url": "https://api.github.com/users/github-actions%5Bbot%5D/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/github-actions%5Bbot%5D/received_events",
+        "type": "Bot",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "The response status check, body reading, JSON parsing, and result extraction (lines 44–50) are outside the try/catch, which only wraps fetch. If the error body is unreadable, the response is invalid JSON, or the payload is malformed (e.g. data.data is missing or empty), a raw error such as TypeError is thrown instead of an EmbeddingError, violating the stated contract and potentially crashing callers.",
+      "created_at": "2026-10-27T20:44:28Z",
+      "updated_at": "2026-10-27T20:44:29Z",
+      "html_url": "https://github.com/SunnyBagal/recall-seeded/pull/12#discussion_r4393941950",
+      "pull_request_url": "https://api.github.com/repos/SunnyBagal/recall-seeded/pulls/12",
+      "_links": {
+        "self": {
+          "href": "https://api.github.com/repos/SunnyBagal/recall-seeded/pulls/comments/4393941950"
+        },
+        "html": {
+          "href": "https://github.com/SunnyBagal/recall-seeded/pull/12#discussion_r4393941950"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/SunnyBagal/recall-seeded/pulls/12"
+        }
+      },
+      "reactions": {
+        "url": "https://api.github.com/repos/SunnyBagal/recall-seeded/pulls/comments/4393941950/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "start_line": null,
+      "original_start_line": null,
+      "start_side": null,
+      "line": 44,
+      "original_line": 44,
+      "side": "RIGHT",
+      "author_association": "NONE",
+      "original_position": 52,
+      "position": 52,
+      "subject_type": "line",
+      "is_copilot_code_review": false,
+      "copilot_code_review_sources": []
+    }
+  ],
+  "reviews": [
+    {
+      "id": 5674064001,
+      "node_id": "PRR_kwDOVPP6e88AAAABUjNYgQ",
+      "user": {
+        "login": "github-actions[bot]",
+        "id": 41898282,
+        "node_id": "MDM6Qm90NDE4OTgyODI=",
+        "avatar_url": "https://avatars.githubusercontent.com/in/15368?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/github-actions%5Bbot%5D",
+        "html_url": "https://github.com/apps/github-actions",
+        "followers_url": "https://api.github.com/users/github-actions%5Bbot%5D/followers",
+        "following_url": "https://api.github.com/users/github-actions%5Bbot%5D/following{/other_user}",
+        "gists_url": "https://api.github.com/users/github-actions%5Bbot%5D/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/github-actions%5Bbot%5D/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/github-actions%5Bbot%5D/subscriptions",
+        "organizations_url": "https://api.github.com/users/github-actions%5Bbot%5D/orgs",
+        "repos_url": "https://api.github.com/users/github-actions%5Bbot%5D/repos",
+        "events_url": "https://api.github.com/users/github-actions%5Bbot%5D/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/github-actions%5Bbot%5D/received_events",
+        "type": "Bot",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "TraceHound · pool-verify-v1 · nvidia/Nemotron-3.5-Super-VL · 1 findings (pool 1, kept 1)\n\nThese comments are model-generated and unverified.\n\n<!-- tracehound:v1 {\"version\":1,\"pipeline\":\"pool-verify-v1\",\"headSha\":\"960dae210386cd39bfbfbb59eb232c2abe60423c\",\"pool\":1,\"kept\":1,\"posted\":1,\"fixes\":{\"attempted\":1,\"valid\":0,\"rejected\":1},\"contracts\":{\"status\":\"ok\",\"inline\":0,\"body\":0,\"ms\":3550,\"typed\":\"complete\"},\"findings\":[{\"path\":\"recall-backend/services/embeddings.ts\",\"line\":44,\"source\":\"both\",\"hasSuggestion\":false}]} -->",
+      "state": "COMMENTED",
+      "html_url": "https://github.com/SunnyBagal/recall-seeded/pull/12#pullrequestreview-5674064001",
+      "pull_request_url": "https://api.github.com/repos/SunnyBagal/recall-seeded/pulls/12",
+      "author_association": "NONE",
+      "_links": {
+        "html": {
+          "href": "https://github.com/SunnyBagal/recall-seeded/pull/12#pullrequestreview-5674064001"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/SunnyBagal/recall-seeded/pulls/12"
+        }
+      },
+      "is_copilot_code_review": false,
+      "copilot_code_review_effort": null,
+      "submitted_at": "2026-10-27T20:44:28Z",
+      "commit_id": "960dae210386cd39bfbfbb59eb232c2abe60423c"
+    }
+  ],
+  "issueComments": []
+}

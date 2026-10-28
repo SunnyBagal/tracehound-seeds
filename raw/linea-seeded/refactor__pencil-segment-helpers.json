@@ -1,0 +1,121 @@
+{
+  "number": 2,
+  "reviewComments": [
+    {
+      "url": "https://api.github.com/repos/SunnyBagal/linea-seeded/pulls/comments/4400416460",
+      "pull_request_review_id": 5682412780,
+      "id": 4400416460,
+      "node_id": "PRRC_kwDOVPP6E88AAAABBkkGzA",
+      "diff_hunk": "@@ -350,6 +350,24 @@ function distToSegment(px: number, py: number, ax: number, ay: number, bx: numbe\n   return Math.hypot(px - cx, py - cy);\n }\n \n+// Visits each consecutive pair of points in a polyline. Stops early and\n+// returns true as soon as fn returns true.\n+function someSegment(points: Pt[], fn: (a: Pt, b: Pt) => boolean): boolean {\n+  for (let i = 0; i < points.length; i++) {",
+      "path": "apps/web/lib/canvas/canvas.ts",
+      "commit_id": "c18cdcc1c048a10eef0cf99ebddc9773c2e7bd76",
+      "original_commit_id": "c18cdcc1c048a10eef0cf99ebddc9773c2e7bd76",
+      "user": {
+        "login": "github-actions[bot]",
+        "id": 41898282,
+        "node_id": "MDM6Qm90NDE4OTgyODI=",
+        "avatar_url": "https://avatars.githubusercontent.com/in/15368?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/github-actions%5Bbot%5D",
+        "html_url": "https://github.com/apps/github-actions",
+        "followers_url": "https://api.github.com/users/github-actions%5Bbot%5D/followers",
+        "following_url": "https://api.github.com/users/github-actions%5Bbot%5D/following{/other_user}",
+        "gists_url": "https://api.github.com/users/github-actions%5Bbot%5D/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/github-actions%5Bbot%5D/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/github-actions%5Bbot%5D/subscriptions",
+        "organizations_url": "https://api.github.com/users/github-actions%5Bbot%5D/orgs",
+        "repos_url": "https://api.github.com/users/github-actions%5Bbot%5D/repos",
+        "events_url": "https://api.github.com/users/github-actions%5Bbot%5D/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/github-actions%5Bbot%5D/received_events",
+        "type": "Bot",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "The loop condition `i < points.length` lets `i` reach the last index, where `points[i + 1]` is `undefined`. The `!` assertion hides the type error, but at runtime accessing `.x`/`.y` on `undefined` throws, crashing `polylineLength()` and the pencil hit detection for any polyline with at least one segment. It should be `i < points.length - 1`, matching the loop it replaced.\n\nSuggested fix (model-generated, not tested):\n```suggestion\n  for (let i = 0; i < points.length - 1; i++) {\n```",
+      "created_at": "2026-10-28T12:16:04Z",
+      "updated_at": "2026-10-28T12:16:05Z",
+      "html_url": "https://github.com/SunnyBagal/linea-seeded/pull/2#discussion_r4400416460",
+      "pull_request_url": "https://api.github.com/repos/SunnyBagal/linea-seeded/pulls/2",
+      "_links": {
+        "self": {
+          "href": "https://api.github.com/repos/SunnyBagal/linea-seeded/pulls/comments/4400416460"
+        },
+        "html": {
+          "href": "https://github.com/SunnyBagal/linea-seeded/pull/2#discussion_r4400416460"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/SunnyBagal/linea-seeded/pulls/2"
+        }
+      },
+      "reactions": {
+        "url": "https://api.github.com/repos/SunnyBagal/linea-seeded/pulls/comments/4400416460/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "start_line": null,
+      "original_start_line": null,
+      "start_side": null,
+      "line": 356,
+      "original_line": 356,
+      "side": "RIGHT",
+      "author_association": "NONE",
+      "original_position": 7,
+      "position": 7,
+      "subject_type": "line",
+      "is_copilot_code_review": false,
+      "copilot_code_review_sources": []
+    }
+  ],
+  "reviews": [
+    {
+      "id": 5682412780,
+      "node_id": "PRR_kwDOVPP6E88AAAABUrK87A",
+      "user": {
+        "login": "github-actions[bot]",
+        "id": 41898282,
+        "node_id": "MDM6Qm90NDE4OTgyODI=",
+        "avatar_url": "https://avatars.githubusercontent.com/in/15368?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/github-actions%5Bbot%5D",
+        "html_url": "https://github.com/apps/github-actions",
+        "followers_url": "https://api.github.com/users/github-actions%5Bbot%5D/followers",
+        "following_url": "https://api.github.com/users/github-actions%5Bbot%5D/following{/other_user}",
+        "gists_url": "https://api.github.com/users/github-actions%5Bbot%5D/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/github-actions%5Bbot%5D/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/github-actions%5Bbot%5D/subscriptions",
+        "organizations_url": "https://api.github.com/users/github-actions%5Bbot%5D/orgs",
+        "repos_url": "https://api.github.com/users/github-actions%5Bbot%5D/repos",
+        "events_url": "https://api.github.com/users/github-actions%5Bbot%5D/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/github-actions%5Bbot%5D/received_events",
+        "type": "Bot",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "TraceHound · pool-verify-v1 · nvidia/Nemotron-3.5-Super-VL · 1 findings (pool 1, kept 1)\n\nThese comments are model-generated and unverified.\n\n<!-- tracehound:v1 {\"version\":1,\"pipeline\":\"pool-verify-v1\",\"headSha\":\"c18cdcc1c048a10eef0cf99ebddc9773c2e7bd76\",\"pool\":1,\"kept\":1,\"posted\":1,\"fixes\":{\"attempted\":1,\"valid\":1,\"rejected\":0},\"contracts\":{\"status\":\"ok\",\"inline\":0,\"body\":0,\"ms\":6445,\"typed\":\"complete\"},\"findings\":[{\"path\":\"apps/web/lib/canvas/canvas.ts\",\"line\":356,\"startLine\":356,\"source\":\"both\",\"hasSuggestion\":true}]} -->",
+      "state": "COMMENTED",
+      "html_url": "https://github.com/SunnyBagal/linea-seeded/pull/2#pullrequestreview-5682412780",
+      "pull_request_url": "https://api.github.com/repos/SunnyBagal/linea-seeded/pulls/2",
+      "author_association": "NONE",
+      "_links": {
+        "html": {
+          "href": "https://github.com/SunnyBagal/linea-seeded/pull/2#pullrequestreview-5682412780"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/SunnyBagal/linea-seeded/pulls/2"
+        }
+      },
+      "is_copilot_code_review": false,
+      "copilot_code_review_effort": null,
+      "submitted_at": "2026-10-28T12:16:04Z",
+      "commit_id": "c18cdcc1c048a10eef0cf99ebddc9773c2e7bd76"
+    }
+  ],
+  "issueComments": []
+}

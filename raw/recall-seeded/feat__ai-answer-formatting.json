@@ -1,0 +1,121 @@
+{
+  "number": 9,
+  "reviewComments": [
+    {
+      "url": "https://api.github.com/repos/SunnyBagal/recall-seeded/pulls/comments/4393884635",
+      "pull_request_review_id": 5673991775,
+      "id": 4393884635,
+      "node_id": "PRRC_kwDOVPP6e88AAAABBeVb2w",
+      "diff_hunk": "@@ -253,37 +253,27 @@ export function AskAIPanel({ open, onClose, context, onClearContext }: AskAIPane\n   );\n }\n \n-function MessageContent({ content, citations }: { content: string; citations?: Citation[] }) {\n-  if (!citations || citations.length === 0) {\n-    return <span className=\"whitespace-pre-wrap\">{content}</span>;\n-  }\n-\n-  const parts = content.split(/(\\[\\d+\\])/g);\n+const CITATION_CLASS =\n+  \"inline-flex items-center px-1.5 py-0.5 mx-0.5 text-xs font-medium bg-blue-500/20 text-blue-300 rounded-md hover:bg-blue-500/30 transition-colors\";\n+\n+// Light inline formatting for answers: **bold**, `code`, and [n] citation\n+// markers turned into links to the cited source.\n+function formatMessage(content: string, citations: Citation[] = []): string {\n+  return content\n+    .replace(/\\*\\*(.+?)\\*\\*/g, \"<strong>$1</strong>\")\n+    .replace(/`([^`]+)`/g, '<code class=\"px-1 rounded bg-white/10 font-mono text-[0.85em]\">$1</code>')\n+    .replace(/\\[(\\d+)\\]/g, (marker, n: string) => {\n+      const citation = citations.find((c) => c.index === Number(n));\n+      if (!citation) return marker;\n+      return `<a href=\"${citation.link}\" target=\"_blank\" rel=\"noreferrer\" class=\"${CITATION_CLASS}\" title=\"${citation.title}\">${n}</a>`;\n+    });\n+}\n \n+function MessageContent({ content, citations }: { content: string; citations?: Citation[] }) {\n   return (\n-    <span className=\"whitespace-pre-wrap\">\n-      {parts.map((part, i) => {\n-        const match = part.match(/^\\[(\\d+)\\]$/);\n-        if (match) {\n-          const citIndex = parseInt(match[1]);\n-          const citation = citations.find((c) => c.index === citIndex);\n-          if (citation) {\n-            return (\n-              <a\n-                key={i}\n-                href={citation.link}\n-                target=\"_blank\"\n-                rel=\"noreferrer\"\n-                className=\"inline-flex items-center px-1.5 py-0.5 mx-0.5 text-xs font-medium bg-blue-500/20 text-blue-300 rounded-md hover:bg-blue-500/30 transition-colors\"\n-                title={citation.title}\n-              >\n-                {citIndex}\n-              </a>\n-            );\n-          }\n-        }\n-        return <span key={i}>{part}</span>;\n-      })}\n-    </span>\n+    <span\n+      className=\"whitespace-pre-wrap\"\n+      dangerouslySetInnerHTML={{ __html: formatMessage(content, citations) }}",
+      "path": "recall-frontend/src/components/AskAIPanel.tsx",
+      "commit_id": "3b88d0022f0672ad61721f87e236dfb80da81809",
+      "original_commit_id": "3b88d0022f0672ad61721f87e236dfb80da81809",
+      "user": {
+        "login": "github-actions[bot]",
+        "id": 41898282,
+        "node_id": "MDM6Qm90NDE4OTgyODI=",
+        "avatar_url": "https://avatars.githubusercontent.com/in/15368?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/github-actions%5Bbot%5D",
+        "html_url": "https://github.com/apps/github-actions",
+        "followers_url": "https://api.github.com/users/github-actions%5Bbot%5D/followers",
+        "following_url": "https://api.github.com/users/github-actions%5Bbot%5D/following{/other_user}",
+        "gists_url": "https://api.github.com/users/github-actions%5Bbot%5D/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/github-actions%5Bbot%5D/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/github-actions%5Bbot%5D/subscriptions",
+        "organizations_url": "https://api.github.com/users/github-actions%5Bbot%5D/orgs",
+        "repos_url": "https://api.github.com/users/github-actions%5Bbot%5D/repos",
+        "events_url": "https://api.github.com/users/github-actions%5Bbot%5D/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/github-actions%5Bbot%5D/received_events",
+        "type": "Bot",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "MessageContent renders AI answer content through dangerouslySetInnerHTML using HTML produced by formatMessage. formatMessage interpolates the raw content into HTML (e.g. the bold replacement on line 263) without escaping characters such as <, >, &, or quotes, so any HTML or script markup in the answer is executed in the page. This is a cross-site scripting vulnerability; the previous implementation escaped the content by rendering it as React text.\n\nSuggested fix (model-generated, not tested):\n```suggestion\n     <span\n       className=\"whitespace-pre-wrap\"\n       dangerouslySetInnerHTML={{ __html: escapeHtml(formatMessage(content, citations)) }}\n     />\n```",
+      "created_at": "2026-10-27T20:38:46Z",
+      "updated_at": "2026-10-27T20:38:46Z",
+      "html_url": "https://github.com/SunnyBagal/recall-seeded/pull/9#discussion_r4393884635",
+      "pull_request_url": "https://api.github.com/repos/SunnyBagal/recall-seeded/pulls/9",
+      "_links": {
+        "self": {
+          "href": "https://api.github.com/repos/SunnyBagal/recall-seeded/pulls/comments/4393884635"
+        },
+        "html": {
+          "href": "https://github.com/SunnyBagal/recall-seeded/pull/9#discussion_r4393884635"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/SunnyBagal/recall-seeded/pulls/9"
+        }
+      },
+      "reactions": {
+        "url": "https://api.github.com/repos/SunnyBagal/recall-seeded/pulls/comments/4393884635/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "start_line": null,
+      "original_start_line": null,
+      "start_side": null,
+      "line": 276,
+      "original_line": 276,
+      "side": "RIGHT",
+      "author_association": "NONE",
+      "original_position": 54,
+      "position": 54,
+      "subject_type": "line",
+      "is_copilot_code_review": false,
+      "copilot_code_review_sources": []
+    }
+  ],
+  "reviews": [
+    {
+      "id": 5673991775,
+      "node_id": "PRR_kwDOVPP6e88AAAABUjI-Xw",
+      "user": {
+        "login": "github-actions[bot]",
+        "id": 41898282,
+        "node_id": "MDM6Qm90NDE4OTgyODI=",
+        "avatar_url": "https://avatars.githubusercontent.com/in/15368?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/github-actions%5Bbot%5D",
+        "html_url": "https://github.com/apps/github-actions",
+        "followers_url": "https://api.github.com/users/github-actions%5Bbot%5D/followers",
+        "following_url": "https://api.github.com/users/github-actions%5Bbot%5D/following{/other_user}",
+        "gists_url": "https://api.github.com/users/github-actions%5Bbot%5D/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/github-actions%5Bbot%5D/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/github-actions%5Bbot%5D/subscriptions",
+        "organizations_url": "https://api.github.com/users/github-actions%5Bbot%5D/orgs",
+        "repos_url": "https://api.github.com/users/github-actions%5Bbot%5D/repos",
+        "events_url": "https://api.github.com/users/github-actions%5Bbot%5D/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/github-actions%5Bbot%5D/received_events",
+        "type": "Bot",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "TraceHound · pool-verify-v1 · nvidia/Nemotron-3.5-Super-VL · 1 findings (pool 1, kept 1)\n\nThese comments are model-generated and unverified.\n\n<!-- tracehound:v1 {\"version\":1,\"pipeline\":\"pool-verify-v1\",\"headSha\":\"3b88d0022f0672ad61721f87e236dfb80da81809\",\"pool\":1,\"kept\":1,\"posted\":1,\"fixes\":{\"attempted\":1,\"valid\":1,\"rejected\":0},\"contracts\":{\"status\":\"ok\",\"inline\":0,\"body\":0,\"ms\":2913,\"typed\":\"complete\"},\"findings\":[{\"path\":\"recall-frontend/src/components/AskAIPanel.tsx\",\"line\":276,\"startLine\":276,\"source\":\"both\",\"hasSuggestion\":true}]} -->",
+      "state": "COMMENTED",
+      "html_url": "https://github.com/SunnyBagal/recall-seeded/pull/9#pullrequestreview-5673991775",
+      "pull_request_url": "https://api.github.com/repos/SunnyBagal/recall-seeded/pulls/9",
+      "author_association": "NONE",
+      "_links": {
+        "html": {
+          "href": "https://github.com/SunnyBagal/recall-seeded/pull/9#pullrequestreview-5673991775"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/SunnyBagal/recall-seeded/pulls/9"
+        }
+      },
+      "is_copilot_code_review": false,
+      "copilot_code_review_effort": null,
+      "submitted_at": "2026-10-27T20:38:46Z",
+      "commit_id": "3b88d0022f0672ad61721f87e236dfb80da81809"
+    }
+  ],
+  "issueComments": []
+}
